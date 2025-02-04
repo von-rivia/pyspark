@@ -1,0 +1,397 @@
+-------------------------------------------------SPARK SQL ---------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------------------
+I ) SPARKSESSION:
+SparkSession es el punto de partida para trabajar con Spark SQL. Es una única entrada a la funcionalidad de Spark y proporciona métodos para crear DataFrame, leer datos en diferentes formatos, ejecutar consultas SQL, y configurar los 
+ajustes de Spark.
+
+****
+from pyspark.sql import SparkSession
+
+spark = SparkSession \
+    .builder \
+    .appName("Python Spark SQL basic example") \
+    .config("spark.some.config.option", "some-value") \
+    .getOrCreate()
+****
+
+--------------------------------------------------------------------------------------------------------------------------
+II) Creating DataFrames:
+Un DataFrame en Spark es una abstracción que proporciona una API optimizada para trabajar con datos estructurados y semiestructurados. Los DataFrames pueden ser creados a partir de diferentes fuentes de datos, como archivos CSV, JSON, Parquet, bases de datos JDBC, entre otros.
+
+1) Crear DataFrame desde una Colección de Datos en Memoria:
+****
+from pyspark.sql import SparkSession
+
+# Crear una SparkSession
+spark = SparkSession.builder.appName("EjemploDataFrame").getOrCreate()
+
+# Crear un DataFrame desde una lista de tuplas
+datos = [("Juan", 28), ("María", 35), ("Pedro", 45)]
+columnas = ["Nombre", "Edad"]
+df = spark.createDataFrame(datos, columnas)
+
+# Mostrar el DataFrame
+df.display() -- LOS MUESTRA ORDENADOS, COMO TABLAS
+df.show()
+****
+
+2) Crear DataFrame desde un Archivo CSV:
+****
+# Leer un archivo CSV y crear un DataFrame
+df_csv = spark.read.csv("/ruta/al/archivo.csv", header=True, inferSchema=True)
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+**** NOTA, EN CASO DE QUE SE QUIERA CAMBIAR EL SCHEMA (SCHEMA = IDENTIFICA EL TIPO DE COLUMNA DEL DF: STRING, DOUBLE, ETC)
+PARA SABER EL SCHEMA: df.printSchema()
+
+° MÉTODO 1:
+SE PUEDE CAMBIAR, POR EJ:
+	my_schema = '''
+			columna 1 TIPO,
+			columna 2 TIPO,
+				.
+				.
+				.
+		    '''
+df_csv = spark.read.csv("/ruta/al/archivo.csv", header=True, Schema = my_schema)
+
+° MÉTODO 2:
+from pyspark.sql.types import *
+from pyspark.sql.functions import *
+
+my_schema = StructType([
+			StructField('columna_1', StringType(), True),
+			StructField('columna_1', StringType(), True),
+			StructField('columna_1', StringType(), True),
+						.
+						.
+						.
+	])
+df_csv = spark.read.csv("/ruta/al/archivo.csv", header=True, Schema = my_schema)
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Mostrar el DataFrame
+df_csv.show()
+****
+
+3) Crear DataFrame desde un Archivo JSON:
+****
+# Leer un archivo JSON y crear un DataFrame
+df_json = spark.read.json("/ruta/al/archivo.json", header=True, Schema=True))
+
+# Mostrar el DataFrame
+df_json.show()
+****
+
+4) Crear DataFrame desde un Archivo Parquet:
+****
+# Leer un archivo Parquet y crear un DataFrame
+df_parquet = spark.read.parquet("/ruta/al/archivo.parquet", header=True, Schema=True))
+
+# Mostrar el DataFrame
+df_parquet.show()
+****
+
+5) Crear DataFrame desde una Base de Datos JDBC:
+****
+# Conectar a una base de datos JDBC y crear un DataFrame
+url = "jdbc:mysql://localhost:3306/basededatos"
+table = "nombre_tabla"
+properties = {"user": "usuario", "password": "contraseña"}
+
+df_jdbc = spark.read.jdbc(url=url, table=table, properties=properties)
+
+# Mostrar el DataFrame
+df_jdbc.show()
+****
+
+6) Crear DataFrame desde un RDD:
+****
+# Crear un RDD
+rdd = spark.sparkContext.parallelize([("Ana", 30), ("Luis", 25)])
+
+# Crear un DataFrame desde un RDD
+df_rdd = spark.createDataFrame(rdd, ["Nombre", "Edad"])
+
+# Mostrar el DataFrame
+df_rdd.show()
+****
+
+--------------------------------------------------------------------------------------------------------------------------
+III) Untyped Dataset Operations (aka DataFrame Operations)
+*: PARA ACCEDER A UNA COLUMNA ESPECIFÍCA, SE RECOMIENDA ACCEDER A ELLA USANDO df['columna'].
+
+1) Selección de columnas:
+from pyspark.sql import SparkSession
+
+# Crear una SparkSession
+spark = SparkSession.builder.appName("EjemploDataFrame").getOrCreate()
+
+# Crear un DataFrame desde una lista de tuplas
+datos = [("Juan", 28, "España"), ("María", 35, "México"), ("Pedro", 45, "Colombia"),
+         ("Ana", 30, "España"), ("Luis", 32, "México")]
+columnas = ["Nombre", "Edad", "País"]
+df = spark.createDataFrame(datos, columnas)
+
+# Seleccionar columnas
+df.select("Nombre", "Edad").show()
+
+2) Filtrado de filas:
+------ df.filter(CONDICIONES).show() ----------
+**** EJ 1:
+# Filtrar filas
+df.filter(df["Edad"] > 30).show()
+****
+
+3) Agregar columnas
+
+df.withColumn("nombre_columna", datos_columna)
+
+**** EJ 1:
+from pyspark.sql.functions import col
+
+# Agregar una nueva columna
+df.withColumn("EdadIncrementada", col("Edad") + 1).show()
+
+
+**** EJ 2:
+
+4) Eliminar Columnas:
+df.drop("nombre_columna)
+
+**** EJ 1:
+# Eliminar una columna
+df.drop("Edad").show()
+****
+
+5) Agrupar y Agregar (Group By y Aggregate Functions)
+df.groupBy("nombre_columna").count("nombre_columna) -- PUEDE SER COUNT, SUM, AVG.
+
+**** EJ 1:
+# Agrupar por columna y contar
+df.groupBy("Edad").count().show()
+****
+
+**** EJ 2:
+# Agrupar por Vendedor y Fecha, y sumar las ventas
+df_agrupado = df_ventas.groupBy("Vendedor", "Fecha").sum("Ventas")
+
+# Mostrar el DataFrame agrupado
+****
+
+**** EJ 3:
+# Crear un DataFrame con datos de empleados
+datos_empleados = [("Juan", "Ventas", 5000, 2023),
+                   ("María", "Ventas", 6000, 2022),
+                   ("Pedro", "Marketing", 4000, 2023),
+                   ("Ana", "Marketing", 3500, 2022),
+                   ("Luis", "Ventas", 7000, 2021),
+                   ("Clara", "Marketing", 4500, 2023)]
+columnas_empleados = ["Nombre", "Departamento", "Salario", "Año"]
+df_empleados = spark.createDataFrame(datos_empleados, columnas_empleados)
+
+# Agrupar por Departamento y Año, y calcular varias agregaciones
+df_agrupado = df_empleados.groupBy("Departamento", "Año") \
+    .agg(
+        sum("Salario").alias("Salario_Total"),
+        avg("Salario").alias("Salario_Promedio"),
+        max("Salario").alias("Salario_Maximo"),
+        min("Salario").alias("Salario_Minimo")
+    )
+
+# Ordenar los resultados por Departamento y Año
+df_ordenado = df_agrupado.orderBy("Departamento", "Año")
+
+# Mostrar el DataFrame ordenado
+df_ordenado.show()
+****
+
+6) Ordenar filas:
+df.orderBy(df["nombre_columna_1].asc(), df["nombre_columna_2].asc(), ...)
+
+**** EJ:
+# Ordenar por columna
+df.orderBy(df["Edad"].desc()).show()
+****
+
+7) Uniones:
+df.join(df2, 'pk')
+
+**** EJ 1:
+# Crear otro DataFrame para la unión
+datos2 = [("Juan", "España"), ("María", "México"), ("Pedro", "Colombia")]
+columnas2 = ["Nombre", "País"]
+df2 = spark.createDataFrame(datos2, columnas2)
+
+# Realizar una unión
+df.join(df2, "Nombre").show()
+****
+
+**** EJ 2:
+# Crear dos DataFrames
+datos1 = [("Juan", 28, "España"), ("María", 35, "México")]
+datos2 = [("Juan", "Ventas", 5000), ("María", "Marketing", 4000)]
+columnas1 = ["Nombre", "Edad", "País"]
+columnas2 = ["Nombre", "Departamento", "Salario"]
+
+df1 = spark.createDataFrame(datos1, columnas1)
+df2 = spark.createDataFrame(datos2, columnas2)
+
+# Realizar una unión
+df_union = df1.join(df2, "Nombre")
+
+# Aplicar una transformación adicional
+df_transformado = df_union.withColumn("Salario_Incrementado", df_union["Salario"] + 500)
+
+# Mostrar el DataFrame unido y transformado
+****
+
+8) Windows functions:
+**** EJ 1: 
+from pyspark.sql.window import Window
+from pyspark.sql.functions import row_number
+
+# Definir una ventana
+windowSpec = Window.partitionBy("País").orderBy("Edad")
+
+# Agregar una columna con el número de fila
+df.withColumn("row_number"
+****
+
+**** EJ 2:
+from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+from pyspark.sql.functions import row_number, rank, dense_rank, avg, sum
+
+# Crear una SparkSession
+spark = SparkSession.builder.appName("FuncionesVentana").getOrCreate()
+
+# Crear un DataFrame con datos de ventas
+datos_ventas = [("Juan", "2023-01-01", 1000),
+                ("María", "2023-01-01", 1500),
+                ("Pedro", "2023-01-01", 2000),
+                ("Juan", "2023-01-02", 1200),
+                ("María", "2023-01-02", 1700),
+                ("Pedro", "2023-01-02", 2200)]
+columnas_ventas = ["Vendedor", "Fecha", "Ventas"]
+df_ventas = spark.createDataFrame(datos_ventas, columnas_ventas)
+
+# Definir una ventana por Vendedor y ordenar por Fecha
+windowSpec = Window.partitionBy("Vendedor").orderBy("Fecha")
+
+# Calcular el número de fila
+df_ventas = df_ventas.withColumn("row_number", row_number().over(windowSpec))
+
+# Calcular el ranking
+df_ventas = df_ventas.withColumn("rank", rank().over(windowSpec))
+
+# Calcular el ranking denso
+df_ventas = df_ventas.withColumn("dense_rank", dense_rank().over(windowSpec))
+
+# Calcular el promedio móvil de las ventas
+df_ventas = df_ventas.withColumn("avg_sales", avg("Ventas").over(windowSpec))
+
+# Calcular la suma acumulada de las ventas
+df_ventas = df_ventas.withColumn("cumulative_sum", sum("Ventas").over(windowSpec))
+
+# Mostrar el DataFrame con las funciones de ventana
+df_ventas.show()
+****
+
+9) Pivoteo:
+df_pivot.pivot('columna_pivote_1', 'columna_pivote_2', ...)
+
+**** EJ 1:
+# Crear un DataFrame para pivoteo
+datos_pivot = [("Juan", "Ventas", 5000), ("María", "Ventas", 6000), 
+               ("Juan", "Marketing", 4000), ("María", "Marketing", 3500)]
+columnas_pivot = ["Nombre", "Departamento", "Salario"]
+df_pivot = spark.createDataFrame(datos_pivot, columnas_pivot)
+
+# Pivotar el DataFrame
+df_pivot.groupBy("Nombre").pivot("Departamento").sum("Salario").show()
+****
+
+
+--------------------------------------------------------------------------------------------------------------------------
+IV) Running SQL Queries Programmatically
+ES NECESARIO CREAR UNA VISTA (YA SEA TEMPORAL O GLOBAL = PERMANENTE) ANTES DE EJECUTAR LA CONSULTA.
+result = spark.sql(consulta)
+
+1) TEMPORAL VIEW
+*** EJ 1:
+# 1 - Creación de una sesión de Spark:
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder.appName("ExampleApp").getOrCreate()
+
+# 2 - Carga de datos en un DataFrame:
+data = [("Alice", 34), ("Bob", 45), ("Cathy", 29)]
+columns = ["Name", "Age"]
+
+df = spark.createDataFrame(data, schema=columns)
+df.show()
+
+# 3 - Registro del DataFrame como una vista temporal:
+df.createOrReplaceTempView("people")
+
+# 4 - Ejecución de una consulta SQL:
+result = spark.sql("SELECT Name, Age FROM people WHERE Age > 30")
+result.show()
+
+
+**** EJ 2:
+# Datos de ejemplo
+data1 = [("Alice", "Math", 85), ("Bob", "Math", 56), ("Cathy", "Math", 90)]
+columns1 = ["Name", "Subject", "Score"]
+
+data2 = [("Alice", "Science", 92), ("Bob", "Science", 79), ("Cathy", "Science", 99)]
+columns2 = ["Name", "Subject", "Score"]
+
+df1 = spark.createDataFrame(data1, schema=columns1)
+df2 = spark.createDataFrame(data2, schema=columns2)
+
+# Creación de vistas temporales
+df1.createOrReplaceTempView("math_scores")
+df2.createOrReplaceTempView("science_scores")
+
+# Consulta SQL avanzada
+query = """
+SELECT m.Name, m.Score AS MathScore, s.Score AS ScienceScore
+FROM math_scores m
+JOIN science_scores s ON m.Name = s.Name
+WHERE m.Score > 60 AND s.Score > 80
+"""
+
+result = spark.sql(query)
+result.show()
+****
+
+2) GLOBAL VIEW:
+**** EJ:
+# Register the DataFrame as a global temporary view
+df.createGlobalTempView("people")
+
+# Global temporary view is tied to a system preserved database `global_temp`
+spark.sql("SELECT * FROM global_temp.people").show()
+# +----+-------+
+# | age|   name|
+# +----+-------+
+# |null|Michael|
+# |  30|   Andy|
+# |  19| Justin|
+# +----+-------+
+
+# Global temporary view is cross-session
+spark.newSession().sql("SELECT * FROM global_temp.people").show()
+# +----+-------+
+# | age|   name|
+# +----+-------+
+# |null|Michael|
+# |  30|   Andy|
+# |  19| Justin|
+****
+
+
+

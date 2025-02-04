@@ -1,0 +1,666 @@
+--------------------------------------------------------------------------------------------------------------------------
+
+____________________________________________________________________________________________________________________________________________________________
+I) SELECCIÓN DE DATOS:
+
+MANERA 1: df.select('columna1', 'columna2', 'columna3', ...).display()
+
+MANERA 2: df.select(col('columna1'), col('columna2'), col('columna3'), ...).display()
+
+____________________________________________________________________________________________________________________________________________________________
+II) ALIAS
+
+df.select(col('columna1').alias('alias1'), col('columna2').alias('alias2')).display()
+
+____________________________________________________________________________________________________________________________________________________________
+III) FILTER / WHERE
+1) Condición = Igual PARA UNA COLUMNA
+df.filter(col('columna_1') == 'Condición').display()
+
+2) Condición = Igual para DOS O MÁS COLUMNAS
+df.filter((col('columna_1)' == 'CONDICION_1') & col('columna_2') == 'CONDICION_2' && ...).display()
+
+3) BUSCAR NULLS Y COINCIDENCIAS EN UNA LISTA:
+db.filter((col('columna_1').isNull()) & (col('columna_2).isin('COND_1', 'COND_2', 'COND_3', 'ETC'))).display()
+
+____________________________________________________________________________________________________________________________________________________________
+IV) CAMBIAR EL NOMBRE A COLUMNAS
+df.withColumnRenamed('columna_original', 'columna_renombrada').display()
+
+____________________________________________________________________________________________________________________________________________________________
+V) AGREGAR COLUMNAS CON VALORES
+TAMBIÉN SE PUEDE USAR PARA AGREGAR UNA COLUMNA NUEVA:
+df.withColumn('columna_nueva', 'valor')
+*En caso de que se quiera agregar EL MISMO VALOR, se tiene que usar lit('valor')
+
+**** EJ:
+df.withColumn('multiply', col('columna_1')*col('columna_2')).display()
+****
+
+____________________________________________________________________________________________________________________________________________________________
+VI) REEMPLAZAR VALORES COLUMNAS
+**** UN VALOR
+df.withColumn('columna_1', regex_replace(col('columna_1'), 'valor_antiguo', 'valor_reemplazo')).display()
+****
+
+**** MULTIPLES VALORES
+df.withColumn('columna_1', regex_replace(col('columna_1'), 'valor_antiguo_1', 'valor_reemplazo_1'))\
+			.withColumn('columna_2', regex_replace(col('columna_2'), 'valor_antiguo_2', 'valor_reemplazo_2')).display()
+
+____________________________________________________________________________________________________________________________________________________________
+VII) CAST (CAMBIAR FORMATO)
+df.withColumn('columna_1', col('columna_1').cast(Type()))
+
+EJ:
+df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
+
+____________________________________________________________________________________________________________________________________________________________
+VIII) Sort / Order By
+df.sort().asc Ó df.sort().desc
+
+**** EJ 1:
+df.sort(col('Item_Weight').desc()).display()
+****
+
+**** EJ 2:
+# Ordenar por "Seccion" ascendente, "Edad" ascendente y "Salario" descendente
+df_sorted = df.sort(col("Seccion").asc(), col("Edad").asc(), col("Salario").desc())
+df_sorted.show()
+
+
++++++++ OTRA MANERA ++++++++++++++++
+df_sorted = df.sort(["Seccion", "Edad", "Salario"], ascending = [0, 0, 1]).display
+0 = True
+1 = False
+
+____________________________________________________________________________________________________________________________________________________________
+IX) Limit
+df.limit(LÍMITE)
+
+**** EJ:
+df.limit(10).display()          ----> MOSTRARÁ SÓLO 10 DATOS
+
+____________________________________________________________________________________________________________________________________________________________
+X) DROP (PARA COLUMNAS)  ---> ELIMINAR COLUMNAS
+df.drop('columna_1', 'columna_2', ... 'columna_n')
+
+____________________________________________________________________________________________________________________________________________________________
+XI) DROP DUPLICATES (ELIMINA DATOS DUPLICADOS)
+1) GENERAL
+df.dropDuplicates()                 ------> ELIMINA DATOS DUPLICADOS DE TODA LA TABLA
+
+2) ESPECIFÍCO:
+df.drop_duplicates(['columna_1', 'columna_2', ..., 'columna_n'])
+
+*) TAMBIÉN SE PUEDE USAR DISTINCT
+df.distinct()
+
+df.distintict(['columna_1', 'columna_2', ... , 'columna_n']).display()
+
+____________________________________________________________________________________________________________________________________________________________
+XII) UNION and UNION BY NAME
+1) UNIR 2 DFS, SIN FILTRO NI NADA. LOS DFS DEBEN TENER LA MISMA LÓGICA DE COLUMNAS.
+df1.union(df2)
+
+2) UNIR LOS DATOS SIGUIENDO UNA ESTRUCTURA COMÚN, CON DATOS DESORDENADOS:
+df1.unionByName(df2)
+
+____________________________________________________________________________________________________________________________________________________________
+XIII) STRING FUNCTIONS
+1) INITCAP (MAYUSCULA EN LA PRIMERA LETRA)
+df.select(initcap('columna_1'), initcap('columna_2'), ...., initcap('columna_n))
+
+*En caso de usar alias:
+df.select(initcap('columna_1').alias('alias_1'), initcap('columna_2').alias('alias_2'), ...., initcap('columna_n).alias('alias_n')
+
+2) UPPER
+df.select(upper('columna_1'), upper('columna_2'), ...., upper('columna_n))
+
+3) LOWER
+df.select(lower('columna_1'), lower('columna_2'), ...., lower('columna_n))
+
+____________________________________________________________________________________________________________________________________________________________
+XIV) DATE FUNCTIONS
+1) CURRENT_DATE
+
+**** EJ: AGREGAR COLUMNA curr_date, CON LA FECHA ACTUAL, A UN DF:
+df.withColumn('curr_date', current_date())
+
+2) Date_Add
+**** EJ: AGREGAR COLUMNA curr_date, CON LA FECHA ACTUAL + FECHA, A UN DF:
+df.withColumn('week_after', date_add('curr_date', 7))     -------> A LA COLUMNA curr_date, CREADA ANTERIORMENTE, LE SUMA 7 DÍAS Y CREA COLUMNA WEEK_AFTER
+
+3) Date_Sub
+**** EJ 1: AGREGAR COLUMNA curr_date, CON LA FECHA ACTUAL - FECHA, A UN DF:
+df.withColumn('week_after', date_sub('curr_date', 7))     -------> A LA COLUMNA curr_date, CREADA ANTERIORMENTE, LE RESTA 7 DÍAS Y CREA COLUMNA WEEK_BEFORE
+
+**** EJ 1: AGREGAR COLUMNA curr_date, CON LA FECHA ACTUAL - FECHA, A UN DF:
+df.withColumn('week_after', date_add('curr_date', -7))     -------> A LA COLUMNA curr_date, CREADA ANTERIORMENTE, LE RESTA 7 DÍAS Y CREA COLUMNA WEEK_BEFORE
+
+4) DATEDIFF --------------> MUESTRA LA DIFERENCIA ENTRE FECHAS
+datediff('columna_fecha_final', 'columna_fecha_inicial') ----> columna_fecha_final - columna_fecha_inicial
+
+df.withColumn('datediff', datediff('curr_date', 'week_after'))
+
+5) DATE_FORMAT ----------------> FORMATEO FECHAS
+1) CAMBIAR UNA COLUMNA
+df.withColumn('columna', date_format('columna', 'formato'))
+++++ FORMATO 1:dd-MM-yyyy
+++++ FORMATO 2: MM-dd-yyyy
+++++ FORMATO 1: yyyy-MM-dd
+
+____________________________________________________________________________________________________________________________________________________________
+XV) MANEJO NULLS
+1) ELIMINAR NULLS
+a) df.dropna('all')   -----> ELIMINA LA FILA SOLO SI TODOS SUS VALORES SON NULOS
+
+b) df.dropna('any')   -----> ELIMINA LA FILA SI ES QUE EXISTE AL MENOS UN VALOR NULO
+
+c) df.dropna(subset=['columna_1', 'columna_2', ...., 'columna_n'])  ---> SI ENCUENTRA UN VALOR NULO EN UNA DE ESAS COLUMNAS, LO ELIMINARÁ.
+
+2) LLENAR NULLS
+a) df.fillna('Not Avalaible')  ----> CAMBIA TODOS LOS NULLS A 'Not Avalaible'
+
+b) df.fillna('valor', subset=['columna_1', 'columna_2', ..., 'columna_n'])  -----> CAMBIAR A 'valor' LOS NULLS DE LAS COLUMNAS SELECCIONADAS
+
+____________________________________________________________________________________________________________________________________________________________
+XVI) Split e Indexeo
+1) Split: Permite separar elementos de las columnas ----> "Type 2" -----> ["Type", "2"]
+df.withColumn("columna", split("columna", "SEPARADOR"))  -- SEPARADOR = " ", "-", "_"
+
+**** EJ 1 UNA COLUMNA:
+df_split = df.withColumn("first_name", split(df["full_name"], " "))    ---> Delimitador = " " ----> "Juan Pedro" -----> ["Juan", "Pedro"]
+*****
+
+**** EJ 2, VARIAS COLUMNAS:
+df_split = df.withColumn("first_name", split(df["full_name"], " ") \
+		.withColumn("last_name", split(df["full_name"], " ") ----> SEPARA "JUAN PEDRO" EN 2 COLUMNAS NUEVAS, LLAMDAS "FIRST_NAME" y "LAST_NAME"
+OJO QUE SÓLO LAS SEPARA, AMBAS COLUMNAS TENDRÁN LA MISMA INFORMACIÓN
+****
+
+2) Indexing: Permite elegir valores de una lista de elementos -----" ["Type", "2"] ------> Usar valor "Type" o "2"
+df.withColumn("columna", split("columna", "SEPARADOR").getItem(n)) , en donde n hace referencia a la posición de los items separados.
+
+**** EJ 1:
+from pyspark.sql.functions import split
+df_split = df.withColumn("first_name", split(df["full_name"], " ").getItem(0)) ----> SELECCIONARÍA SÓLO "JUAN" (PRIMER NOMBRE)
+****
+
+**** EJ 2:
+# Suponiendo que tienes un DataFrame df y columnas 'address1', 'address2', 'address3'
+df_split = df.withColumn("city1", split(df["address1"], ", ").getItem(0)) \
+             .withColumn("state1", split(df["address1"], ", ").getItem(1)) \
+             .withColumn("zipcode1", split(df["address1"], ", ").getItem(2)) \
+             .withColumn("city2", split(df["address2"], ", ").getItem(0)) \
+             .withColumn("state2", split(df["address2"], ", ").getItem(1)) \
+             .withColumn("zipcode2", split(df["address2"], ", ").getItem(2)) \
+             .withColumn("city3", split(df["address3"], ", ").getItem(0)) \
+             .withColumn("state3", split(df["address3"], ", ").getItem(1)) \
+             .withColumn("zipcode3", split(df["address3"], ", ").getItem(2))
+
+****
+
+____________________________________________________________________________________________________________________________________________________________
+XVII) Explode: Sirve para separar una columna, manteniendo su PK (LA COLUMNA DEBE SER UN ARRAY O LISTA!!!)
+df.withColumn('nombre_columna_a_guardar', explode('columna_a_aplicar_explode'))
+
+****
+EJ: 
+ID | name	       |		ID | name	|
+1  |["Juan", "Pedro"]  |    ----->      1  |	Juan	|
+2  |["Anita", "Perez"] |		1  |	Pedro	|
+					2  |	Anita	|
+					2  |	Perez	|
+
+df.withColumn('name', explode('name'))
+
+En caso de que queramos dejarlo en otra columna:
+df.withColumn('nombres', explode('name'))
+
+ID | Name	       |		ID |      Name		|      nombres  |
+1  |["Juan", "Pedro"]  |    ----->      1  |["Juan", "Pedro"]	|   Juan	|
+2  |["Anita", "Perez"] |		1  |["Juan", "Pedro"]	|   Pedro	|
+					2  |["Anita", "Perez"]	|   Anita	|
+					2  |["Anita", "Perez"]	|   Perez	|
+
+*NOTA: es de buena práctica, utilizar df['columna'] para refeirse a las columnas. EJ: df.withColumn('nombres', explode(df['name']))
+
+____________________________________________________________________________________________________________________________________________________________
+XVIII) Array_Contains. Sirve para verificar si una columna contiene un item dentro de su array (Entrega true o false)
+df.withColumn('nombre_columna', array_contains('columna_a_buscar', 'item_a_buscar'))
+
+**** EJ 1:
+df_contains = df.withColumn('has_apple', array_contains(col('fruits'), 'apple'))
+****
+
+**** EJ 2:
+df_contains = df.withColumn('has_apple_fruits', array_contains(col('fruits'), 'apple')) \
+                .withColumn('has_apple_colors', array_contains(col('colors'), 'apple'))
+****
+
+____________________________________________________________________________________________________________________________________________________________
+XIX) Group_by
+df.groupBy('columna').agg(function('columna_a_analizar'))
+df.groupBy('columna_1', 'columna_2', ...., 'columna_n').agg(function('columna_a_analizar'))
+
+**** FUNCTION:
+sum: Calcula la suma de los valores en una columna.
+avg: Calcula el promedio de los valores en una columna.
+count: Cuenta el número de valores (o filas) en una columna.
+max: Encuentra el valor máximo en una columna.
+min: Encuentra el valor mínimo en una columna.
+mean: Calcula el promedio de los valores en una columna (similar a avg).
+stddev: Calcula la desviación estándar de los valores en una columna.
+variance: Calcula la varianza de los valores en una columna.
+first: Obtiene el primer valor en una columna.
+last: Obtiene el último valor en una columna.
+*****
+
+**** EJ 1:
+# Agrupar por 'group_col' y realizar agregaciones en 'col1' y 'col2'
+agg_df = df.groupBy("group_col").agg(
+    sum("col1").alias("total_col1"),
+    avg("col1").alias("avg_col1"),
+    sum("col2").alias("total_col2"),
+    avg("col2").alias("avg_col2")
+)
+****
+
+**** EJ 2:
+# Agrupar por 'group_col' y realizar agregaciones en 'col1' y 'col2'
+agg_df = df.groupBy("group_col").agg(
+    max("col1").alias("max_col1"),
+    min("col1").alias("min_col1"),
+    max("col2").alias("max_col2"),
+    min("col2").alias("min_col2")
+)
+****
+
+____________________________________________________________________________________________________________________________________________________________
+XX) Collect_List: A partir de una PK, permite crear en una columna un array de items, de acuerdo a la columna que se le indique.
+
+
+**** EJ 1:
+id | color	|    ------->  id | collect_list(colores)		|
+1  | rojo   	|		1 | ["rojo", "negro", "naranjo"]	|
+1  | negro	|		2 | ["morado", "verde"]			|
+1  | naranjo	|
+2  | morado	|
+2  | verde	|
+
+df.groupBy('id').agg(collect_list('book').alias('alias'))
+
+**** EJ 2:
+# Agrupar por 'group_col' y usar collect_list en 'col1' y 'col2'
+agg_df = df.groupBy("group_col").agg(
+    collect_list("col1").alias("list_col1"),
+    collect_list("col2").alias("list_col2")
+)
+****
+
+____________________________________________________________________________________________________________________________________________________________
+XXI) PIVOT
+df.groupBy('columna_row').pivot('columna_fila').agg(function('columna_a_analizar'))
+
+**** EJ 1:
+df.groupBy('Item_Type').pivot('Outlet_Size').agg(avg('Item_MRP'))
+
+**** EJ 2:
+from pyspark.sql import SparkSession
+
+# Crear una sesión de Spark
+spark = SparkSession.builder.appName("EjemploPivot").getOrCreate()
+
+# Crear un DataFrame de ejemplo
+data = [("2021", "ProductA", 100), 
+        ("2021", "ProductB", 150), 
+        ("2022", "ProductA", 200), 
+        ("2022", "ProductB", 250), 
+        ("2023", "ProductA", 300), 
+        ("2023", "ProductB", 350)]
+columns = ['year', 'product', 'sales']
+df = spark.createDataFrame(data, columns)
+
+# Mostrar el DataFrame original
+df.show()
+
+# Pivotar el DataFrame
+pivot_df = df.groupBy("year").pivot("product").sum("sales")
+
+# Mostrar el DataFrame pivotado
+pivot_df.show()
+****
+
+**** EJ 3:Agregaciones Múltiples con pivot
+from pyspark.sql.functions import avg
+
+# Pivotar el DataFrame con suma y promedio
+pivot_df = df.groupBy("year").pivot("product").agg(
+    sum("sales").alias("total_sales"),
+    avg("sales").alias("average_sales")
+)
+
+# Mostrar el DataFrame pivotado con múltiples agregaciones
+pivot_df.show()
+**** 
+
+**** EJ 4: pivot con Múltiples Columnas
+pivoted_df = df.groupBy("Fecha").pivot("Producto").agg(
+    sum("Ventas").alias("Total_Ventas"),
+    sum("Beneficios").alias("Total_Beneficios")
+)
+pivoted_df.show()
+****
+
+____________________________________________________________________________________________________________________________________________________________
+XXII) WHEN - OTHERWISE
+df.withColumn('columna_nombre', when(col('columna_a_analizar') == 'condición', 'valor'))
+
+**** EJ 1:
+df.withColumn('veg_flag', when(col('Item_Type') == 'Meat', 'Non-Veg'))
+****
+
+**** EJ 2:
+df = df.withColumn("Resultado", when(df.Calificación >= 50, "Aprobado").otherwise("Reprobado"))
+**** 
+
+**** EJ 3:
+df = df.withColumn("Clasificación",
+                   when(df.Calificación >= 85, "Excelente")
+                   .when((df.Calificación >= 70) & (df.Calificación < 85), "Bueno")
+                   .when((df.Calificación >= 50) & (df.Calificación < 70), "Regular")
+                   .otherwise("Reprobado"))
+****
+
+**** EJ 4:
+df = df.withColumn("Nivel",
+                   when((df.Salario >= 10000) & (df.Años_Experiencia >= 10), "Senior")
+                   .when((df.Salario >= 5000) & (df.Años_Experiencia >= 5), "Mid-level")
+                   .otherwise("Junior"))
+****
+
+____________________________________________________________________________________________________________________________________________________________
+XXIII) JOINS:
+1) INNER JOIN: JUNTA LOS DATOS DEL DF1 CON LOS DEL DF2, EN BASE A UNA PK.
+Un INNER JOIN devuelve solo las filas que tienen coincidencias en ambos DataFrames.
+df1.join(df2, df1.PK == df2.PK, 'inner')
+inner_join_df = df1.join(df2, on="PK", "inner")
+
+**** EJ1:
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("JoinExample").getOrCreate()
+
+data1 = [("1", "Alice", 29),
+         ("2", "Bob", 31),
+         ("3", "Catherine", 27)]
+data2 = [("1", "New York"),
+         ("2", "Los Angeles"),
+         ("4", "Chicago")]
+
+columns1 = ["ID", "Nombre", "Edad"]
+columns2 = ["ID", "Ciudad"]
+df1 = spark.createDataFrame(data1, columns1)
+df2 = spark.createDataFrame(data2, columns2)
+df1.show()
+df2.show()
+
+inner_join_df = df1.join(df2, df1.ID == df2.ID, "inner")
+inner_join_df.show()
+
+ID	Nombre	Edad	Ciudad
+1	Alice	29	New York
+2	Bob	31	Los Angeles
+****
+
+**** EJ 2:
+# Inner join
+inner_join_df = df1.join(df2, on="ID", "inner")
+inner_join_df.show()
+****
+
+2) LEFT JOIN
+Un LEFT JOIN devuelve todas las filas del DataFrame de la izquierda (df1), y las filas coincidentes del DataFrame de la derecha (df2). Si no hay coincidencia, las columnas del DataFrame derecho serán null.
+* SE USA CUANDO NO SE QUIERE PERDER LOS DATOS DEL DF1
+df1.join(df2, df1.PK == df2.PK, 'left')
+left_join_df = df1.join(df2, on="PK", "left")
+
+**** EJ:
+df1.join(df2, ON='dept_id', 'left)
+****
+
+3) RIGHT JOIN
+Devuelve todas las filas del DataFrame derecho, y las filas correspondientes del izquierdo. Las filas del DataFrame izquierdo 
+que no tienen correspondencia serán null.
+*SE USA CUANDO NO SE QUIEREN ELIMINAR DATOS DEL DF2
+df1.join(df2, df1.PK == df2.PK, 'right')
+right_join_df = df1.join(df2, on="PK", "right")
+
+4) FULL JOIN
+Devuelve todas las filas de ambos DataFrame. Las filas en las que no haya coincidencia, se dejarán columnas con Nulls.
+* SE USA CUANDO NO SE QUIERE ELIMINAR DATOS NI DEL DF1 NI DEL DF2
+df1.join(df2, df1.PK == df2.PK, 'full')
+full_join_df = df1.join(df2, on="PK", "full")
+
+5) ANTI JOIN
+Devuelve todas las filas que NO coincidan en ambos DataFrame.
+df1.join(df2, df1.PK == df2.PK, 'anti')
+anti_join_df = df1.join(df2, on="PK", "anti")
+
+____________________________________________________________________________________________________________________________________________________________
+XXIV) WINDOW FUNCTIONS
+1) Row Number: Agregar una columna, en la que esta funciona como un contador.
+*Asigna un número de fila único dentro de una partición de un DataFrame.
+df.withColumn('nombre_columna', row_number().over(Window(df_partitionBy_orderBy))
+
+row_number |
+1	   |	
+2	   |
+3	   |
+.          |
+.  	   |
+.    	   |
+
+df.withColumn('nombre_columna', row_number().over(Window.orderBy('columna_orden')))
+
+**** EJ 1:
+# Aplicar row_number() sobre la ventana
+window_spec = Window.partitionBy("Departamento").orderBy("Salario")
+df_with_row_number = df.withColumn("row_number", row_number().over(window_spec))
+****
+
+**** EJ 2:
+# Definir la ventana con múltiples columnas
+window_spec_multi = Window.partitionBy("Departamento", "Fecha").orderBy("Salario")
+
+# Aplicar row_number() sobre la ventana
+df2_with_row_number = df2.withColumn("row_number", row_number().over(window_spec_multi))
+****
+
+2) Rank: Ordena acorde a un criterio (SI DOS VALORES SON IGUALES, LES ASIGNA EL MISMO VALOR)
+* rank() asigna el mismo rango a filas con valores iguales y salta el siguiente número en el caso de duplicados.
+EJ:
+
+n | rank
+1 |  1
+1 |  1
+1 |  1
+2 |  4
+2 |  4
+3 |  6
+
+**** EJ 1:
+# Definir la ventana
+window_spec = Window.partitionBy("Departamento").orderBy("Salario")
+
+# Aplicar rank() sobre la ventana
+df_with_rank = df.withColumn("rank", rank().over(window_spec))
+df_with_rank.show()
+****
+
+**** EJ 2:
+# Definir la ventana con múltiples columnas
+window_spec_multi = Window.partitionBy("Departamento", "Fecha").orderBy("Salario")
+
+# Aplicar rank() sobre la ventana
+df2_with_rank = df2.withColumn("rank", rank().over(window_spec_multi))
+df2_with_rank.show()
+****
+
+3) Dense Rank:
+n | dense_rank
+1 |  1
+1 |  1
+1 |  1
+2 |  2
+2 |  2
+3 |  3
+
+**** EJ 1:
+# Definir la ventana
+window_spec = Window.partitionBy("Departamento").orderBy("Salario")
+
+# Aplicar dense_rank() sobre la ventana
+df_with_dense_rank = df.withColumn("dense_rank", dense_rank().over(window_spec))
+****
+
+**** EJ 2:
+# Definir la ventana con múltiples columnas
+window_spec_multi = Window.partitionBy("Departamento", "Fecha").orderBy("Salario")
+
+# Aplicar dense_rank() sobre la ventana
+df2_with_dense_rank = df2.withColumn("dense_rank", dense_rank().over(window_spec_multi))
+****
+
+4) Suma Acumulativa: Suma TODA LA COLUMNA, sin importar a qué pertenezca.
+Window_spec = Window.orderBy('columna_orden).rowsBetween(Window.unboundedPreceding, Window.currentRow)
+df.withColumn('suma_acum', sum('columna_a_sumar').over(Window_spec))
+
+* Window.orderBy('columna_orden'): Esta parte del código define que la ventana se ordenará según la columna
+ especificada, en este caso 'columna_orden'. Las funciones de ventana operarán sobre las filas en el orden especificado por esta columna.
+* rowsBetween(Window.unboundedPreceding, Window.currentRow): Esta parte define el rango de la ventana. 
+* Window.unboundedPreceding indica el inicio de la ventana desde la primera fila del grupo y Window.currentRow indica que la ventana se extiende hasta la fila actual en cada grupo.
+*En conjunto, este código crea una especificación de ventana (Window_spec) que ordena las filas según 'columna_orden' y define una ventana que incluye todas las filas desde el inicio hasta la fila actual.
+
+____________________________________________________________________________________________________________________________________________________________
+XXV) USER DEFINED FUNCTIONS
+1) Definición de una función Python: def funcion(parametro1, parametro2, ...., parametro3)
+	return datos_trabajados
+* Los parametros dependen de la cantidad de datos que tiene la columna. Una columna, del tipo lista, si tiene 3 items, sólo funcionará 
+para una función que llame 3 parametros, y así.
+
+2) Registro de la función como una UDF:
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
+funcion_udf = udf(funcion, StringType())
+
+3) Aplicar función UDF a columna:
+df.withColumn('nombre_columna', funcion_udf(df.columna))
+
+**** EJ:
+def concatenar(s1, s2):
+    return s1 + " " + s2
+
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
+
+concatenar_udf = udf(concatenar, StringType())
+
+df = spark.createDataFrame([("hola", "mundo"), ("buenos", "dias")], ["palabra1", "palabra2"])
+df_concatenado = df.withColumn("saludo_completo", concatenar_udf(df.palabra1, df.palabra2))
+df_concatenado.show()
+
+
+palabra1|	palabra2	|saludo_completo
+hola	|	mundo		|hola mundo
+buenos	|	dias		|buenos dias
+****
+____________________________________________________________________________________________________________________________________________________________
+XXVI) DATA WRITING
+1) CSV
+df.write.format('csv').save('path/archivo.csv')
++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.format('csv')\
+		.save('path/archivo.csv')
++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.csv("path/archivo.csv", header=True)
+
+2) JSON
+df.write.format('json').save('path/archivo.json')
++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.format('json')\
+		.save('path/archivo.json')
++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.json("path/archivo.json", header=True)
+
+3) TABLA
+df.write.format('json').mode('append/overwrite/error/ignore').saveAsTable('path/my_table')
+
+____________________________________________________________________________________________________________________________________________________________
+XXVII) DATA WRITING MODE
+1) Append: El modo append agrega los nuevos datos al final de la tabla existente sin modificar los datos originales.
+df.write.mode("append").csv("ruta/a/archivo.csv")
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.format('csv'\
+		.mode('append')
+		.save('path/archivo.csv)
+
+2) Overwrite: El modo overwrite sobrescribe los datos existentes en la ubicación de destino con los nuevos datos.
+df.write.mode("overwrite").json("ruta/a/archivo.json")
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.format('csv'\
+		.mode('append')
+		.save('path/archivo.csv)
+
+3) Error: El modo error (también conocido como errorifexists) lanza un error si ya existen datos en la ubicación de destino. 
+Este es el comportamiento predeterminado si no se especifica un modo.
+df.write.mode("error").json("ruta/a/archivo.json")
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.format('json'\
+		.mode('error')
+		.save('path/archivo.json)
+
+4) Ignore
+El modo ignore evita la escritura de los nuevos datos si ya existen datos en la ubicación de destino. No se produce ningún cambio y no se genera un error.
+df.write.mode("ignore").csv("ruta/a/archivo.csv")
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+df.write.format('json'\
+		.mode('ignore')
+		.save('path/archivo.json')
+
+____________________________________________________________________________________________________________________________________________________________
+XXVIII) MANAGED VS EXTERNAL TABLES
+1) MANAGED TABLES:
+- Gestión Total: Spark administra tanto los datos como el esquema de la tabla.
+- Almacenamiento: Los datos se almacenan en una ubicación interna gestionada por Spark.
+- Eliminación: Al eliminar la tabla, los datos también se eliminan automáticamente.
+df.write.saveAsTable("mi_tabla_gestionada")
+
+2) EXTERNAL TABLES:
+-Gestión Parcial: Spark solo administra el esquema de la tabla, no los datos.
+-Almacenamiento: Los datos se almacenan en una ubicación externa especificada.
+-Eliminación: Al eliminar la tabla, los datos permanecen en la ubicación externa.
+df.write.option("path", "/ruta/a/almacenamiento").saveAsTable("mi_tabla_externa")
+
+*LA DIFERENCIA, EN SÍNTAXIS, RADICA EN QUE LAS TABLAS EXTERNAS TIENEN UN PATH INDICADO.
+
+____________________________________________________________________________________________________________________________________________________________
+XXIX) SPARK SQL:
+
+1) VISTAS TEMPORALES (TEMP VIEW)
+df.createTempView('view_name')
+
+- FUNCIONAN DE LA MISMA MANERA QUE LAS VISTAS EN SQL. SON VISTAS QUE PERMANECEN DURANTE LA EJECUCIÓN SOLAMENTE, LUEGO DESAPARECEN.
+- SE PUEDEN USAR EN CUANTO CON SPARK SQL:
+SELECT * FROM view_name
+
+2) QUERY:
+spark_query = '
+SELECT *
+FROM
+view_name'
+
+df_sql = spark.sql(spark_query)
+df_sql.show()
+
+- SE PUEDEN INSERTAR CONSULTAS SQL UTILIZANDO .spark.sql(QUERY)

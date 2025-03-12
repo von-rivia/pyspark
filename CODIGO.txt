@@ -81,8 +81,11 @@ SELECT
 FROM RESULTADOS AS A
 LEFT JOIN informacional_prd.bu_deu_in.clientes_bco_stgo_mes AS B
     ON A.rut = B.RUT_CLIE
-WHERE B.CLI_RES <> 997
+WHERE B.CLI_RES <> 997;
 
 
 -- CONSULTA FINAL
 SELECT * FROM RESULTADOS_Y_CLIENTES;
+
+
+[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `A`.`cod_prod_gestion` cannot be resolved. Did you mean one of the following? [`A`.`ult_cod_cges`, `A`.`cod_entidad`, `A`.`cod_cmf`, `A`.`cod_cta_contable`, `A`.`ind_conciliacion`]. SQLSTATE: 42703; line 13, pos 4

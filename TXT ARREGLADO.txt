@@ -1,0 +1,85 @@
+-- VISTA TEMPORAL INTERMEDIA
+CREATE OR REPLACE TEMPORARY VIEW RESULTADOS AS
+SELECT 
+    A.fec_data AS fec_data,
+    A.ind_conciliacion AS ind_conciliacion,
+    SUM(CAST(A.imp_resultado_total_real_ml AS DOUBLE)) AS RSTDO_real_ML,
+    SUM(CAST(A.imp_resultado_total_ficticio_ml AS DOUBLE)) AS RSTDO_ficticio_ML,
+    SUM(CAST(
+        CASE
+            WHEN A.cod_producto_gestion_lv_4 = 'BG1' AND A.concepto_contable = 'A' THEN (A.saldo_cierre_total_ml) * 1
+            WHEN A.cod_producto_gestion_lv_4 = 'BG2' AND A.concepto_contable = 'A' THEN (A.saldo_cierre_total_ml) * -1
+            WHEN A.cod_producto_gestion_lv_4 = 'BG1' AND A.concepto_contable = 'P' THEN (A.saldo_cierre_total_ml) * -1
+            WHEN A.cod_producto_gestion_lv_4 = 'BG2' AND A.concepto_contable = 'P' THEN (A.saldo_cierre_total_ml) * 1
+            ELSE (A.saldo_cierre_total_ml)
+        END AS DOUBLE
+    )) AS SP_TOT_ML,
+    SUM(CAST(
+        CASE
+            WHEN A.cod_producto_gestion_lv_4 = 'BG1' AND A.concepto_contable = 'A' THEN (A.saldo_medio_total_ml) * 1
+            WHEN A.cod_producto_gestion_lv_4 = 'BG2' AND A.concepto_contable = 'A' THEN (A.saldo_medio_total_ml) * -1
+            WHEN A.cod_producto_gestion_lv_4 = 'BG1' AND A.concepto_contable = 'P' THEN (A.saldo_medio_total_ml) * -1
+            WHEN A.cod_producto_gestion_lv_4 = 'BG2' AND A.concepto_contable = 'P' THEN (A.saldo_medio_total_ml) * 1
+            ELSE (A.saldo_medio_total_ml)
+        END AS DOUBLE
+    )) AS SM_TOT_ML,
+    A.cod_entidad AS cod_entidad,
+    A.cod_prod_gestion AS ult_cod_pdg,
+    A.origen_part AS origen_part,
+    A.cod_cta_gestion AS ult_cod_cges,
+    A.cod_cta_contable,
+    A.des_cta_contable,
+    A.cod_cargabal AS cargabal,
+    A.cod_cmf,
+    CAST(SUBSTRING(A.rut_dv, 1, LENGTH(A.rut_dv) - 1) AS INT) AS rut,
+    RIGHT(A.rut_dv, 1) AS dv
+FROM 
+    informacional_prd.nsgexp.nsg_producto_comercial_mes AS A
+WHERE 
+    A.data_date_part = '2025-02-28'
+    AND A.cod_entidad = '0035'
+    AND A.cod_cmf IN (
+        '105000500', '411200309', '411450102', '411450400', '411720309', '412180100', 
+        '412350200', '412380306', '416350200', '431180101', '431180102', '431180103',
+        '431180104', '431180105', '431180106', '431250101'
+    )
+GROUP BY 
+    A.fec_data,
+    A.ind_conciliacion,
+    A.cod_entidad,
+    A.cod_prod_gestion,
+    A.origen_part,
+    A.cod_cta_gestion,
+    A.cod_cta_contable,
+    A.des_cta_contable,
+    A.cod_cargabal,
+    A.cod_cmf,
+    CAST(SUBSTRING(A.rut_dv, 1, LENGTH(A.rut_dv) - 1) AS INT),
+    RIGHT(A.rut_dv, 1);
+
+-- VISTA TEMPORAL FINAL
+CREATE OR REPLACE TEMPORARY VIEW RESULTADOS_Y_CLIENTES AS
+SELECT 
+    A.rut,
+    A.dv,
+    B.CLI_RES,
+    A.fec_data,
+    A.ind_conciliacion,
+    A.RSTDO_real_ML,
+    A.SP_TOT_ML,
+    A.SM_TOT_ML,
+    A.cod_entidad,
+    A.ult_cod_pdg,
+    A.origen_part,
+    A.ult_cod_cges,
+    A.cod_cta_contable,
+    A.des_cta_contable,
+    A.cargabal,
+    A.cod_cmf
+FROM RESULTADOS AS A
+LEFT JOIN informacional_prd.bu_deu_in.clientes_bco_stgo_mes AS B
+    ON A.rut = B.RUT_CLIE
+WHERE B.CLI_RES IS NOT NULL AND B.CLI_RES <> 997;
+
+-- CONSULTA FINAL
+SELECT * FROM RESULTADOS_Y_CLIENTES;

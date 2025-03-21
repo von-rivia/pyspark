@@ -1,0 +1,210 @@
+import pandas as pd
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import sum as spark_sum, abs as spark_abs, col, expr, substring, concat, lit, when, window
+from pyspark.sql.window import Window
+
+# Crear sesión de Spark
+spark = SparkSession.builder.appName("SQLtoPySpark").getOrCreate()
+# Cargar las tablas de datos en DataFrames
+plancta_contab_fusion_df = spark.table("informacional_prd.bu_syp_in.plancta_contab_fusion")
+sdo_contab_fusion_df = spark.table("informacional_prd.bu_syp_in.sdo_contab_fusion") 
+
+# Variables a modificar
+fecha_saldo_diario_bsc = 20250228
+
+# 001_Crea_Plan_Cuentas_BSC
+df_001_plan_cuentas_bsc = plancta_contab_fusion_df.select(
+   col("empresa"),
+   col("cuenta"),
+   col("descripcion"),
+   col("cod_reaj"),
+   col("tipo_moneda"),
+   col("cent_resp"),
+   col("num_cta_sbif_mdr"),
+   col("cod_producto"),
+)
+# 002_Crea_Saldos_Diarios_BSC
+df_002_saldos_diarios_bsc = sdo_contab_fusion_df.filter(
+   (col("sucur") == 9999) &
+   (col("fecha") == fecha_saldo_diario_bsc)
+).select(
+   col("empresa"),
+   col("sucur"),
+   col("moned"),
+   col("codig"),
+   col("fecha"),
+   col("tipo_moneda"),
+   col("sdo_orig").cast("bigint"),
+   col("sdo_peso").cast("bigint"),
+   col("prom_orig").cast("bigint"),
+   col("prom_peso").cast("bigint"),
+   col("sdo_mes_orig").cast("bigint"),
+   col("sdo_mes_peso").cast("bigint"),
+   col("prom_anual_orig").cast("bigint"),
+   col("prom_anual_peso").cast("bigint"),
+)
+# 003_Detalle_Contable_BSC
+df_003_detalle_contable_bsc = df_001_plan_cuentas_bsc.alias("pcb").join(
+   df_002_saldos_diarios_bsc.alias("sdb"),
+   col("pcb.cuenta") == col("sdb.codig")
+).select(
+   col("pcb.cuenta"),
+   col("pcb.descripcion"),
+   col("pcb.num_cta_sbif_mdr"),
+   col("sdb.fecha"),
+   col("sdb.sdo_mes_peso"),
+   col("sdb.sdo_peso").cast("bigint"),
+   col("sdb.sdo_mes_orig").cast("bigint"),
+   col("sdb.sdo_orig").cast("bigint"),
+   col("pcb.cent_resp").cast("bigint"),
+   col("pcb.cod_producto").cast("bigint"),
+   col("sdb.sucur"),
+   col("pcb.cod_reaj"),
+   col("sdb.moned")
+).orderBy(col("pcb.cuenta"))
+# 004_700_Base_MBMRMC
+df_004_700_base_mbrmc = df_001_plan_cuentas_bsc.alias("pcb").join(
+   df_002_saldos_diarios_bsc.alias("sdb"),
+   col("pcb.cuenta") == col("sdb.codig"),
+).select(
+   substring(col("pcb.num_cta_sbif_mdr"), 1, 1).alias("Clase"),
+   col("pcb.num_cta_sbif_mdr"),
+   col("pcb.cuenta"),
+   col("pcb.descripcion"),
+   col("pcb.tipo_moneda"),
+   col("pcb.cod_reaj"),
+   col("sdb.sdo_peso").cast("bigint"),
+   col("sdb.fecha"),
+)
+
+#005_701_MB
+# 005_701_MB
+df_005_701_mb = df_004_700_base_mbrmc.filter(
+   (col("Clase") == "1") | 
+   (col("Clase") == "2") | 
+   (col("Clase") == "3")
+).select(
+   col("Clase"),
+   col("num_cta_sbif_mdr"),
+   col("cuenta"),
+   col("descripcion"),
+   col("tipo_moneda"),
+   col("cod_reaj"),
+   when(col("Clase") != 1, col("sdo_peso") * -1).otherwise(col("sdo_peso")).cast("bigint").alias("Importe"),
+   col("fecha")
+)
+
+# 006_702_MR
+df_006_702_mr = df_004_700_base_mbrmc.filter(
+   col("Clase") == "4"
+).select(
+   col("Clase"),
+   col("num_cta_sbif_mdr"),
+   col("cuenta"),
+   col("descripcion"),
+   col("tipo_moneda"),
+   col("cod_reaj"),
+   (col("sdo_peso") * -1).cast("bigint").alias("Importe"),
+   col("fecha"),
+)
+# 007_703_MC
+df_007_703_mc = df_004_700_base_mbrmc.filter(
+   (col("Clase") == "9")|
+   (col("Clase") == "8")
+).select(
+   col("Clase"),
+   col("num_cta_sbif_mdr"),
+   col("cuenta"),
+   col("descripcion"),
+   col("tipo_moneda"),
+   col("cod_reaj"),
+   (col("sdo_peso") * -1).cast("bigint").alias("Importe"),
+   col("fecha"),
+)
+# 001_700_MBMRMC
+df_001_700_mbmrmc = df_005_701_mb.union(
+   df_006_702_mr
+).union(
+   df_007_703_mc
+)
+# 008_Agrupador_moneda
+df_008_agrupador_moneda = df_001_700_mbmrmc.withColumn(
+   "Agrupador_mon", concat(col("tipo_moneda"), lit("_"), col("cod_reaj"))
+)
+# 009_Agrupador_glsa_moneda
+# -- CREACION TABLA 003_Agrupador_Moneda --
+datos_Agrupador_Moneda_003 = [("0_0", "01_No Reajustable"),
+                             ("0_994", "03_Reajustable TC"),
+                             ("0_998", "02_Reajustable IPC"),
+                             ("0_995", "02_Reajustable IPC"),
+                             ("0_997", "02_Reajustable IPC"),
+                             ("2_0", "04_Equivalente")]
+columnas_Agrupador_Moneda_003 = ["Moneda", "Glsa_moneda"]
+df_003_agrupador_moneda = spark.createDataFrame(datos_Agrupador_Moneda_003, columnas_Agrupador_Moneda_003)
+df_009_agrupador_glsa_moneda = df_008_agrupador_moneda.alias("008").join(
+   df_003_agrupador_moneda.alias("003"),
+   col("008.Agrupador_mon") == col("003.Moneda")
+).select(
+   col("008.num_cta_sbif_mdr"),
+   col("008.cuenta"),
+   col("008.descripcion"),
+   col("008.tipo_moneda"),
+   col("008.cod_reaj"),
+   when(col("008.Importe").isNull(), 0).otherwise(col("008.Importe")).cast("bigint").alias("Sdo_Acum"),
+   col("008.fecha"),
+   col("008.Agrupador_mon"),
+   col("003.Glsa_moneda"),
+)
+# 001_Crea_Interfaz
+# Filtrar registros donde num_cta_sbif_mdr no sea igual a 0
+df_filtrado = df_009_agrupador_glsa_moneda.filter(df_009_agrupador_glsa_moneda.num_cta_sbif_mdr != 0)
+# Agrupar por num_cta_sbif_mdr y Glsa_moneda, y agregar sumas de Sdo_Acum
+df_001_crea_interfaz_agrupar = df_filtrado.groupBy("num_cta_sbif_mdr", "Glsa_moneda").agg(
+   spark_sum("Sdo_Acum").cast("bigint").alias("SumaDeSdo_Acum")
+)
+# Crear columna "Total" sumando Sdo_Acum agrupado por num_cta_sbif_mdr
+df_total = df_filtrado.groupBy("num_cta_sbif_mdr").agg(
+   spark_sum("Sdo_Acum").cast("bigint").alias("Total")
+)
+# Unir df_001_crea_interfaz_agrupar con df_total usando num_cta_sbif_mdr
+df_unido = df_001_crea_interfaz_agrupar.join(df_total, on="num_cta_sbif_mdr")
+# Pivotar los datos sobre Glsa_moneda
+df_001_crea_interfaz = df_unido.groupBy("num_cta_sbif_mdr", "Total").pivot("Glsa_moneda").agg(
+   spark_sum("SumaDeSdo_Acum").cast("bigint")
+)
+
+# 010_Genera_Interfaz_Def
+df_010_genera_interfaz_def = df_001_crea_interfaz.select(
+   col("num_cta_sbif_mdr").alias("Cod_CMF"),
+   spark_abs(when(col("Total").isNull(), 0).otherwise(col("Total"))).alias("0"),
+   when(col("Total") > 0, "+").otherwise("-").alias("0_0"),
+   spark_abs(when(col("01_No Reajustable").isNull(), 0).otherwise(col("01_No Reajustable"))).alias("1"),
+   when(col("01_No Reajustable") > 0, "+").otherwise("-").alias("1_0"),
+   spark_abs(when(col("02_Reajustable IPC").isNull(), 0).otherwise(col("02_Reajustable IPC"))).alias("2"),
+   when(col("02_Reajustable IPC") > 0, "+").otherwise("-").alias("2_0"),
+   spark_abs(when(col("03_Reajustable TC").isNull(), 0).otherwise(col("03_Reajustable TC"))).alias("3"),
+   when(col("03_Reajustable TC") > 0, "+").otherwise("-").alias("3_0"),
+   spark_abs(when(col("04_Equivalente").isNull(), 0).otherwise(col("04_Equivalente"))).alias("4"),
+   when(col("04_Equivalente") > 0, "+").otherwise("-").alias("4_0")
+).orderBy("Cod_CMF")
+
+#Creación / Descarga tablas
+df_003_detalle_contable_bsc_pandas = df_003_detalle_contable_bsc.toPandas()
+df_010_genera_interfaz_def_pandas = df_010_genera_interfaz_def.toPandas()
+with pd.ExcelWriter('/Workspace/Users/n918175@corp.santander.cl/Balance_Diario/Balance_diario.xlsx') as writer:
+    df_003_detalle_contable_bsc_pandas.to_excel(writer, sheet_name='Detalle Contable BSC')
+    df_010_genera_interfaz_def_pandas.to_excel(writer, sheet_name='Genera Interfaz DEF')
+
+
+#Guardar los datos en tablas para el Dashboard
+df_003_detalle_contable_bsc.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_Diario_Detalle_Contable_in")
+
+df_010_genera_interfaz_def.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_Diario_Interfaz_in")

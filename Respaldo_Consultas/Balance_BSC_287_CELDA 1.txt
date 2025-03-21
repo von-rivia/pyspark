@@ -1,0 +1,255 @@
+%sql
+-- 001_Plan_Ctas_Sbif_Sypcon
+CREATE OR REPLACE TEMPORARY VIEW Tabla_Plan_Ctas_Sbif_Sypcon AS
+SELECT
+LEFT(num_cta_sbif_mdr, 1) AS RUBRO,
+LEFT(cuenta_sbif, 4) AS SBIF,
+CONCAT('00000', CUENTA) AS CUENTA_15_,
+cuenta,
+descripcion,
+tipo_cuenta,
+num_cta_sbif_mdr, 
+est_cuenta,
+cod_reaj,
+cod_linea
+FROM informacional_prd.bu_syp_in.plancta_contab_fusion
+WHERE TIPO_CUENTA <> ' '
+    AND est_cuenta ='A';
+
+-- 
+CREATE OR REPLACE TEMPORARY VIEW max_timestamp AS (
+    SELECT 
+        MAX(data_timestamp_part) AS max_data_timestamp_part 
+    FROM 
+        informacional_prd.bu_syp_in_hist.sdo_contab_fusion 
+    WHERE 
+        data_date_part = '2025-03-19');
+
+-- 002_Saldos_Ctas_Sypcon_Historica
+CREATE OR REPLACE TEMPORARY VIEW Tabla_Saldos_Ctas_Sypcon AS
+SELECT
+sch.sucur,
+sch.moned,
+sch.tipo_moneda,
+LEFT(pc.num_cta_sbif_mdr, 1) AS RUBRO,
+LEFT(pc.cuenta_sbif, 4) AS SBIF,
+CONCAT('00000', pc.cuenta) AS CUENTA_15_,
+pc.cod_reaj,
+CAST(sch.sdo_orig AS BIGINT),
+pc.cuenta,
+pc.descripcion,
+CAST(sch.sdo_peso AS BIGINT),
+CAST(sch.prom_peso AS BIGINT),
+CAST(sch.sdo_mes_peso AS BIGINT),
+CAST(sch.prom_anual_peso AS BIGINT),
+sch.fecha,
+LEFT(pc.num_cta_sbif_mdr,5) AS MB2 ,
+pc.num_cta_sbif_mdr,
+sch.data_date_part
+FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion  AS sch
+    LEFT JOIN informacional_prd.bu_syp_in.plancta_contab_fusion AS pc
+    ON sch.codig = pc.cuenta
+WHERE sch.sucur = 9999
+    AND sch.fecha = 20250319
+    AND sch.data_date_part = '2025-03-19'
+    AND sch.data_timestamp_part = (SELECT max_data_timestamp_part FROM max_timestamp);
+
+
+SELECT * FROM Tabla_Saldos_Ctas_Sypcon;
+
+-- 009_Datos_Cuentas_Sypcon
+CREATE OR REPLACE TEMPORARY VIEW Datos_Cuentas_Sypcon AS
+SELECT
+sucur,
+moned,
+cuenta,
+descripcion,
+sdo_peso,
+prom_anual_peso,
+fecha
+FROM Tabla_Saldos_Ctas_Sypcon;
+
+-- 010_Detalle_Sypcon_Sbif_MDR
+CREATE OR REPLACE TEMPORARY VIEW Detalle_Sypcon_Sbif_MDR AS
+SELECT
+tpc.RUBRO,
+tsd.Sbif_Detalle_,
+tsd.Descripcion_Sbif_Detalle_,
+tpc.CUENTA,
+tpc.DESCRIPCION,
+CAST(SUM(tsc.SDO_PESO) AS BIGINT) AS SumaDeSDO_PESO,
+CAST(SUM(tsc.PROM_PESO) AS BIGINT) AS SumaDePROM_PESO,
+CAST(SUM(tsc.SDO_MES_PESO) AS BIGINT) AS SumaDeSDO_MES_PESO,
+CAST(SUM(tsc.PROM_ANUAL_PESO) AS BIGINT) AS SumaDePROM_ANUAL_PESO,
+tpc.COD_REAJ,
+tsc.FECHA
+FROM Tabla_Plan_Ctas_Sbif_Sypcon AS tpc RIGHT JOIN Tabla_Saldos_Ctas_Sypcon as tsc
+    ON tpc.CUENTA = tsc.CUENTA
+        LEFT JOIN sandbox.grrf.tabla_sbif_detalle_mtx AS tsd
+            ON tsc.NUM_CTA_SBIF_MDR = tsd.Sbif_Detalle_
+GROUP BY 
+tpc.RUBRO,
+tsd.Sbif_Detalle_,
+tsd.Descripcion_Sbif_Detalle_,
+tpc.CUENTA,
+tpc.DESCRIPCION,
+tpc.COD_REAJ,
+tsc.FECHA;
+
+-- 011_Cuadre_Sypcon_Sbif_MDR_Total
+CREATE OR REPLACE TEMPORARY VIEW Cuadre_Sypcon_Sbif_MDR_Total AS 
+SELECT
+tn.DESCRIPCION,
+tn.RUBRO,
+CAST(SUM(ds.SumaDeSDO_PESO) AS BIGINT) AS SDO_PESO_,
+CAST(SUM(ds.SumaDePROM_PESO) AS BIGINT) AS PROM_PESO_,
+CAST(SUM(ds.SumaDeSDO_MES_PESO) AS BIGINT) AS SDO_MES_PESO_,
+CAST(SUM(ds.SumaDePROM_ANUAL_PESO) AS BIGINT) AS PROM_ANUAL_PESO_,
+ds.FECHA
+FROM Detalle_Sypcon_Sbif_MDR AS ds INNER JOIN sandbox.grrf.Tabla_NUM_CTA_SBIF_MDR AS tn
+    ON ds.RUBRO = tn.RUBRO
+GROUP BY
+tn.DESCRIPCION,
+tn.RUBRO,
+ds.FECHA
+ORDER BY 
+tn.RUBRO;
+
+-- 013_Cuentas_Activos_Sbif_MDR
+CREATE OR REPLACE TEMPORARY VIEW Cuentas_Activos_Sbif_MDR AS
+SELECT
+    RUBRO,
+    Sbif_Detalle_,
+    Descripcion_Sbif_Detalle_,
+    CUENTA,
+    DESCRIPCION,
+    CAST(SumaDeSDO_PESO AS BIGINT) AS SDO_PESO_,
+    CAST(SumaDePROM_PESO AS BIGINT) AS PROM_PESO_,
+    CAST(SumaDeSDO_MES_PESO AS BIGINT) AS SDO_MES_PESO_,
+    CAST(SumaDePROM_ANUAL_PESO AS BIGINT) AS PROM_ANUAL_PESO_,
+    FECHA
+FROM Detalle_Sypcon_Sbif_MDR
+WHERE RUBRO = '1'
+ORDER BY CUENTA;
+
+-- 0014_Cuentas_Pasivos_Sbif_MDR
+CREATE OR REPLACE TEMPORARY VIEW Cuentas_Pasivos_Sbif_MDRR AS
+SELECT
+RUBRO,
+Sbif_Detalle_,
+Descripcion_Sbif_Detalle_,
+CUENTA,
+DESCRIPCION,
+CAST(SumaDeSDO_PESO AS BIGINT) AS SDO_PESO_,
+CAST(SumaDePROM_PESO AS BIGINT) AS PROM_PESO_,
+CAST(SumaDeSDO_MES_PESO AS BIGINT) AS SDO_MES_PESO_,
+CAST(SumaDePROM_ANUAL_PESO AS BIGINT) AS PROM_ANUAL_PESO_,
+FECHA
+FROM Detalle_Sypcon_Sbif_MDR
+WHERE RUBRO = '2'
+ORDER BY CUENTA;
+
+-- 015_Cuentas_Capital_y_Reservas_Sbif_MDR
+CREATE OR REPLACE TEMPORARY VIEW Cuentas_Capital_y_Reservas_Sbif_MDR AS
+SELECT
+RUBRO,
+Sbif_Detalle_,
+Descripcion_Sbif_Detalle_,
+CUENTA,
+DESCRIPCION,
+CAST(SumaDeSDO_PESO AS BIGINT) AS SDO_PESO_,
+CAST(SumaDePROM_PESO AS BIGINT) AS PROM_PESO_,
+CAST(SumaDeSDO_MES_PESO AS BIGINT) AS SDO_MES_PESO_,
+CAST(SumaDePROM_ANUAL_PESO AS BIGINT) AS PROM_ANUAL_PESO_,
+FECHA
+FROM Detalle_Sypcon_Sbif_MDR
+WHERE RUBRO = '3'
+ORDER BY CUENTA;
+
+-- 016_Cuentas_Resultados_Sbif_MDR
+CREATE OR REPLACE TEMPORARY VIEW Cuentas_Resultados_Sbif_MDR AS
+SELECT
+RUBRO,
+Sbif_Detalle_,
+Descripcion_Sbif_Detalle_,
+CUENTA,
+DESCRIPCION,
+CAST(SumaDeSDO_PESO AS BIGINT) AS SDO_PESO_,
+CAST(SumaDePROM_PESO AS BIGINT) AS PROM_PESO_,
+CAST(SumaDeSDO_MES_PESO AS BIGINT) AS SDO_MES_PESO_,
+CAST(SumaDePROM_ANUAL_PESO AS BIGINT) AS PROM_ANUAL_PESO_,
+FECHA
+FROM Detalle_Sypcon_Sbif_MDR
+WHERE RUBRO = '4'
+ORDER BY CUENTA;
+
+-- 017_Cuentas_Orden_Sbif_MDR
+CREATE OR REPLACE TEMPORARY VIEW Cuentas_Orden_Sbif_MDR AS
+SELECT
+RUBRO,
+Sbif_Detalle_,
+Descripcion_Sbif_Detalle_,
+CUENTA,
+DESCRIPCION,
+CAST(SumaDeSDO_PESO AS BIGINT) AS SDO_PESO_,
+CAST(SumaDePROM_PESO AS BIGINT) AS PROM_PESO_,
+CAST(SumaDeSDO_MES_PESO AS BIGINT) AS SDO_MES_PESO_,
+CAST(SumaDePROM_ANUAL_PESO AS BIGINT) AS PROM_ANUAL_PESO_,
+FECHA
+FROM Detalle_Sypcon_Sbif_MDR
+WHERE RUBRO = '8' OR RUBRO = '9'
+ORDER BY 
+RUBRO,
+CUENTA;
+
+-- 018_Cuentas_Sin_Codigo_Sbif_MDR
+CREATE OR REPLACE TEMPORARY VIEW Cuentas_Sin_Codigo_Sbif_MDR AS
+SELECT
+RUBRO,
+Sbif_Detalle_,
+Descripcion_Sbif_Detalle_,
+CUENTA,
+DESCRIPCION,
+CAST(SumaDeSDO_PESO AS BIGINT) AS SDO_PESO_,
+CAST(SumaDePROM_PESO AS BIGINT) AS PROM_PESO_,
+CAST(SumaDeSDO_MES_PESO AS BIGINT) AS SDO_MES_PESO_,
+CAST(SumaDePROM_ANUAL_PESO AS BIGINT) AS PROM_ANUAL_PESO_,
+FECHA
+FROM Detalle_Sypcon_Sbif_MDR
+WHERE RUBRO = '0'
+ORDER BY CUENTA;
+
+-- 100_287_Formato_Balance_SBIF_Detalle
+CREATE OR REPLACE TEMPORARY VIEW 287_Formato_Balance_SBIF_Detalle AS
+SELECT
+ts.NUM_CTA_SBIF_MDR,
+td.Descripcion_Sbif_Detalle_ AS DESCRIPCION_NUM_CTA_SBIF_MDR,
+ts.CUENTA,
+ts.DESCRIPCION,
+CAST(ts.SDO_PESO AS BIGINT),
+CAST(ts.SDO_ORIG AS BIGINT),
+ts.FECHA,
+ts.MONED,
+ts.COD_REAJ,
+ts.MB2
+FROM Tabla_Saldos_Ctas_Sypcon AS ts LEFT JOIN sandbox.grrf.tabla_sbif_detalle_mtx AS td
+    ON ts.NUM_CTA_SBIF_MDR = td.Sbif_Detalle_
+ORDER BY ts.CUENTA;
+
+-- 200_Promedios_Balance_SBIF_Detalle
+CREATE OR REPLACE TEMPORARY VIEW Promedios_Balance_SBIF_Detalle AS
+SELECT
+ts.CUENTA,
+ts.DESCRIPCION,
+ts.NUM_CTA_SBIF_MDR,
+CAST(SUM(ts.PROM_ANUAL_PESO) AS BIGINT) AS SumaDePROM_ANUAL_PESO,
+ts.FECHA
+FROM Tabla_Saldos_Ctas_Sypcon AS ts LEFT JOIN sandbox.grrf.tabla_sbif_detalle_mtx AS td
+    ON ts.NUM_CTA_SBIF_MDR = td.Sbif_Detalle_
+WHERE ts.FECHA = 20250228
+GROUP BY 
+ts.CUENTA,
+ts.DESCRIPCION,
+ts.NUM_CTA_SBIF_MDR,
+ts.FECHA
+ORDER BY ts.CUENTA;

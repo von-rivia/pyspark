@@ -1,0 +1,65 @@
+%sql
+-- 001_Crea_Plan_Cuentas_BSC
+CREATE OR REPLACE TEMPORARY VIEW Plan_Cuentas_BSC AS
+SELECT
+  empresa, 
+  cuenta, 
+  descripcion, 
+  cod_reaj, 
+  tipo_moneda, 
+  cent_resp, 
+  num_cta_sbif_mdr, 
+  cod_producto, 
+  cuenta_sbif 
+FROM informacional_prd.bu_syp_in.plancta_contab_fusion;
+
+-- 002_Crea_Saldos_Diarios_BSC
+CREATE OR REPLACE TEMPORARY VIEW Saldos_Diarios_BSC AS
+SELECT 
+  empresa, 
+  sucur, 
+  moned, 
+  codig, 
+  fecha, 
+  tipo_moneda, 
+  CAST(sdo_orig AS BIGINT), 
+  CAST(sdo_peso AS BIGINT), 
+  CAST(prom_orig AS BIGINT), 
+  CAST(prom_peso AS BIGINT), 
+  CAST(sdo_mes_orig AS BIGINT), 
+  CAST(sdo_mes_peso AS BIGINT), 
+  CAST(prom_anual_orig AS BIGINT), 
+  CAST(prom_anual_peso AS BIGINT) 
+FROM informacional_prd.bu_syp_in.sdo_contab_fusion
+WHERE (sucur = 9999 AND fecha = 20250319);
+
+-- 001_Saldo_Informe_Encaje
+CREATE OR REPLACE TEMPORARY VIEW Saldo_Informe_Caja AS
+SELECT 
+  sc.empresa, 
+  sc.sucur, 
+  sc.codig, 
+  CAST(pc.descripcion AS STRING) AS descripcion1, 
+  CAST(SUM(sc.sdo_peso) AS BIGINT) AS sdo_peso, 
+  sc.fecha, 
+  CAST(SUM(sc.sdo_orig) AS BIGINT) AS sdo_orig, 
+  sc.moned, 
+  pc.num_cta_sbif_mdr, 
+  pc.cuenta_sbif, 
+  LEFT(pc.cuenta_sbif, 4) AS SBIF_
+FROM Saldos_Diarios_BSC AS sc 
+INNER JOIN Plan_Cuentas_BSC AS pc ON sc.codig = pc.cuenta
+GROUP BY 
+  sc.empresa, 
+  sc.sucur, 
+  sc.codig, 
+  pc.descripcion, 
+  sc.fecha, 
+  sc.moned, 
+  pc.num_cta_sbif_mdr, 
+  pc.cuenta_sbif, 
+  LEFT(pc.cuenta_sbif, 4)
+ORDER BY
+sc.codig,
+sc.moned;
+ 

@@ -1,0 +1,24 @@
+from pyspark.sql import SparkSession
+import pandas as pd
+
+# Crear sesión de Spark
+spark = SparkSession.builder.appName("SQLtoPySpark").getOrCreate()
+
+# Tablas a DF
+df_Saldo_Informe_Caja = spark.sql("""
+SELECT * 
+FROM Saldo_Informe_Caja
+""")
+
+# Creación / Descarga tablas
+df_Saldo_Informe_Caja_pandas = df_Saldo_Informe_Caja.toPandas()
+
+#with pd.ExcelWriter('/Workspace/Users/n918175@corp.santander.cl/Evolutivo/Evolutivo.xlsx') as writer:
+    df_Saldo_Informe_Caja_pandas.to_excel(writer, sheet_name='Saldo Informe Caja')
+
+#Guardar los datos en tablas para el Dashboard
+df_Saldo_Informe_Caja.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Encaje_Saldo_Informe_Caja")

@@ -1,0 +1,116 @@
+from pyspark.sql import SparkSession
+import pandas as pd
+
+# Crear sesión de Spark
+spark = SparkSession.builder.appName("SQLtoPySpark").getOrCreate()
+
+# Tablas a DF
+df_287_Formato_Balance_SBIF_Detalle = spark.sql("""
+SELECT * 
+FROM 287_Formato_Balance_SBIF_Detalle
+""")
+
+df_Cuadre_Sypcon_Sbif_MDR_Total = spark.sql("""
+SELECT * 
+FROM Cuadre_Sypcon_Sbif_MDR_Total
+""")
+
+df_Cuentas_Activos_Sbif_MDR = spark.sql("""
+SELECT * 
+FROM Cuentas_Activos_Sbif_MDR
+""")
+
+df_Cuentas_Pasivos_Sbif_MDRR = spark.sql("""
+SELECT * 
+FROM Cuentas_Pasivos_Sbif_MDRR
+""")
+
+df_Cuentas_Capital_y_Reservas_Sbif_MDR = spark.sql("""
+SELECT * 
+FROM Cuentas_Capital_y_Reservas_Sbif_MDR
+""")
+
+df_Cuentas_Resultados_Sbif_MDR = spark.sql("""
+SELECT * 
+FROM Cuentas_Resultados_Sbif_MDR
+""")
+
+df_Cuentas_Orden_Sbif_MDR= spark.sql("""
+SELECT * 
+FROM Cuentas_Orden_Sbif_MDR
+""")
+
+df_Cuentas_Sin_Codigo_Sbif_MDR= spark.sql("""
+SELECT * 
+FROM Cuentas_Sin_Codigo_Sbif_MDR
+""")
+
+# Creación / Descarga tablas
+df_287_Formato_Balance_SBIF_Detalle_pandas = df_287_Formato_Balance_SBIF_Detalle.toPandas()
+df_Cuadre_Sypcon_Sbif_MDR_Total_pandas = df_Cuadre_Sypcon_Sbif_MDR_Total.toPandas()
+df_Cuentas_Activos_Sbif_MDR_pandas = df_Cuentas_Activos_Sbif_MDR.toPandas()
+df_Cuentas_Pasivos_Sbif_MDRR_pandas = df_Cuentas_Pasivos_Sbif_MDRR.toPandas()
+df_Cuentas_Capital_y_Reservas_Sbif_MDR_pandas = df_Cuentas_Capital_y_Reservas_Sbif_MDR.toPandas()
+df_Cuentas_Resultados_Sbif_MDR_pandas = df_Cuentas_Resultados_Sbif_MDR.toPandas()
+df_Cuentas_Orden_Sbif_MDR_pandas = df_Cuentas_Orden_Sbif_MDR.toPandas()
+df_Cuentas_Sin_Codigo_Sbif_MDR_pandas = df_Cuentas_Sin_Codigo_Sbif_MDR.toPandas()
+
+with pd.ExcelWriter('/Workspace/Users/n918175@corp.santander.cl/Balance_287/Balance_287.xlsx') as writer:
+    df_287_Formato_Balance_SBIF_Detalle_pandas.to_excel(writer, sheet_name='287 Formato Balance')
+    df_Cuadre_Sypcon_Sbif_MDR_Total_pandas.to_excel(writer, sheet_name='Cuadre Sypcon')
+    df_Cuentas_Activos_Sbif_MDR_pandas.to_excel(writer, sheet_name='Activos')
+    df_Cuentas_Pasivos_Sbif_MDRR_pandas.to_excel(writer, sheet_name='Pasivos')
+    df_Cuentas_Capital_y_Reservas_Sbif_MDR_pandas.to_excel(writer, sheet_name='Capital y Reservas')
+    df_Cuentas_Resultados_Sbif_MDR_pandas.to_excel(writer, sheet_name='Resultados')
+    df_Cuentas_Orden_Sbif_MDR_pandas.to_excel(writer, sheet_name='Orden')
+    df_Cuentas_Sin_Codigo_Sbif_MDR_pandas.to_excel(writer, sheet_name='Sin Codigo')
+
+
+#Guardar los datos en tablas para el Dashboard
+df_287_Formato_Balance_SBIF_Detalle.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Formato_Balance_SBIF_Detalle")
+
+df_Cuadre_Sypcon_Sbif_MDR_Total.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Cuadre_Sypcon_Sbif_MDR_Total")
+
+df_Cuentas_Activos_Sbif_MDR.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Activos_Sbif_MDR")
+
+df_Cuentas_Pasivos_Sbif_MDRR.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Pasivos_Sbif_MDR")
+
+df_Cuentas_Capital_y_Reservas_Sbif_MDR.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Capital_y_Reservas_Sbif_MDR")
+
+df_Cuentas_Resultados_Sbif_MDR.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Resultados_Sbif_MDR")
+
+df_Cuentas_Orden_Sbif_MDR.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Orden_Sbif_MDR")
+
+df_Cuentas_Sin_Codigo_Sbif_MDR.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Balance_287_Sin_Codigo_Sbif_MDR")

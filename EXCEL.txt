@@ -1,0 +1,39 @@
+=INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$H$3:$H$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$I$3:$I$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+J: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$J$3:$J$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+K: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$K$3:$K$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+L: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$L$3:$L$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+M: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$M$3:$M$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+N: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$N$3:$N$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+O: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$O$3:$O$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+P: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$P$3:$P$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+Q: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$Q$3:$Q$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+R: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$R$3:$R$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+S: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$S$3:$S$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+T: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$T$20332:$T$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+U: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$U$20332:$U$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+V: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$V$20332:$V$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+W: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$W$40661:$W$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+X: =INDICE([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$X$40661:$X$60991; COINCIDIR(1; ([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$A$3:$A$60991=A2)*([Evolutivo_Diario_CMF_18_02_2025.xlsm]Base_CMF!$D$3:$D$60991=D2); 0))
+
+
+=SI(Y(Volumen_Evolutivo_Diario_18!A2=Volumen_Evolutivo_Histórico_18!A2;Volumen_Evolutivo_Diario_18!D2=Volumen_Evolutivo_Histórico_18!D2); Volumen_Evolutivo_Diario_18!C2-Volumen_Evolutivo_Histórico_18!C2; "")
+
+
+

@@ -1,0 +1,459 @@
+USE CATALOG `prod_business`;
+USE SCHEMA `ooffexp`;
+
+-- MTM Cartera
+DROP TABLE IF EXISTS MTM_Cartera;
+CREATE OR REPLACE TABLE MTM_Cartera AS
+SELECT 
+    SUM(
+        CASE 
+            WHEN a.data_date_part = (:FECHA_ACTUAL) THEN COALESCE(a.mtm_pesos, 0) 
+            ELSE 0 
+        END
+    ) - SUM(
+        CASE 
+            WHEN a.data_date_part = (:FECHA_ANTERIOR) THEN COALESCE(a.mtm_pesos, 0) 
+            ELSE 0 
+        END
+    ) AS MTM_Cartera
+FROM 
+    prod_business.ooffexp.cartera_opciones_cierre_final AS a
+WHERE 
+    a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+GROUP BY 
+    a.estrategia
+ORDER BY 
+    a.estrategia
+UNION ALL
+SELECT
+    SUM(c.sdo_mes_peso) AS MTM_Contabilidad
+FROM 
+    informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+LEFT JOIN 
+    sandbox.ganafinanciero.clasificacion_mtm_syp AS d 
+    ON d.codigo = c.codig
+WHERE 
+    c.data_date_part = (:FECHA_DATA) 
+    AND c.sucur = 9999 
+    AND c.fecha = (:FECHA_SYP) 
+    AND c.moned = 0
+    AND c.codig IN (
+        5620256033, 5620256036, 5620256065, 5620256066, 5620256090,
+        5620356006, 5620356007, 5620356008, 5620356030, 7607321044,
+        7620276025, 7620276028, 7620276075, 7620276076, 7620276106,
+        7620376006, 7620376007, 7620376008, 7620376033, 7710277134,
+        7710277135, 5620056038, 5620056042, 7620076036, 7620076039
+    )
+GROUP BY 
+    d.clasificacion
+ORDER BY 
+    d.clasificacion
+UNION ALL
+SELECT 
+    SUM(CASE 
+            WHEN a.data_date_part = (:FECHA_ACTUAL) 
+            THEN COALESCE(a.mtm_pesos, 0) 
+            ELSE 0 
+        END)
+    - SUM(CASE 
+            WHEN a.data_date_part = (:FECHA_ANTERIOR) 
+            THEN COALESCE(a.mtm_pesos, 0) 
+            ELSE 0 
+        END) 
+    + (
+        SELECT SUM(c.sdo_mes_peso) AS MTM
+        FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+        LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_syp AS d 
+            ON d.codigo = c.codig
+        WHERE 
+            c.data_date_part = (:FECHA_DATA) 
+            AND c.sucur = 9999 
+            AND c.fecha = (:FECHA_SYP) 
+            AND c.moned = 0
+            -- Formato FECHA_SYP AAAAMMDD último día hábil
+            AND c.codig IN (
+                5620256033, 5620256036, 5620256065, 5620256066, 5620256090, 
+                5620356006, 5620356007, 5620356008, 5620356030, 7607321044, 
+                7620276025, 7620276028, 7620276075, 7620276076, 7620276106, 
+                7620376006, 7620376007, 7620376008, 7620376033, 7710277134, 
+                7710277135, 5620056038, 5620056042, 7620076036, 7620076039
+            )
+        GROUP BY 
+            d.clasificacion
+        ORDER BY 
+            d.clasificacion
+    ) AS Dif_MTM
+FROM 
+    prod_business.ooffexp.cartera_opciones_cierre_final AS a
+WHERE 
+    a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+GROUP BY 
+    a.estrategia
+ORDER BY 
+    a.estrategia;
+
+-- MTM MTM_FWD_AMERICANO
+DROP TABLE IF EXISTS MTM_FWD_AMERICANO;
+CREATE OR REPLACE TABLE MTM_FWD_AMERICANO AS
+SELECT SUM(CASE 
+            WHEN a.data_date_part=(:FECHA_ACTUAL) THEN coalesce(a.valor_mercado,0) 
+            ELSE 0 
+          END) - 
+       SUM(CASE 
+            WHEN a.data_date_part=(:FECHA_ANTERIOR) THEN coalesce(a.valor_mercado,0) 
+            ELSE 0 
+          END) AS MTM_Cartera
+FROM prod_business.ooffexp.cartera_forward_americano AS a
+WHERE a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+UNION ALL
+SELECT SUM(c.sdo_mes_peso) AS MTM_Contabilidad
+FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_syp AS d 
+    ON d.codigo=c.codig
+WHERE c.data_date_part= (:FECHA_DATA) 
+    AND c.sucur = 9999 
+    AND c.fecha = (:FECHA_SYP) 
+    AND c.moned = 0
+    AND c.codig IN 
+    (5607216002, 5607216004, 5607256113, 5607356008, 5607356010,
+    7607216002, 7607216004, 7607276101, 7607276102, 7607276103,
+    7607321038, 7607321040)
+UNION ALL
+SELECT SUM(CASE 
+            WHEN a.data_date_part=(:FECHA_ACTUAL) THEN coalesce(a.valor_mercado,0) 
+            ELSE 0 
+          END) - 
+       SUM(CASE 
+            WHEN a.data_date_part=(:FECHA_ANTERIOR) THEN coalesce(a.valor_mercado,0) 
+            ELSE 0 
+          END) +
+       (SELECT SUM(c.sdo_mes_peso) AS MTM
+        FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+        LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_syp AS d 
+            ON d.codigo=c.codig
+        WHERE c.data_date_part= (:FECHA_DATA) 
+            AND c.sucur = 9999 
+            AND c.fecha = (:FECHA_SYP) 
+            AND c.moned = 0
+            AND c.codig IN 
+            (5607216002, 5607216004, 5607256113, 5607356008, 5607356010,
+            7607216002, 7607216004, 7607276101, 7607276102, 7607276103,
+            7607321038, 7607321040)
+        GROUP BY d.clasificacion
+        ORDER BY d.clasificacion) AS Dif_MTM
+FROM prod_business.ooffexp.cartera_forward_americano AS a
+WHERE a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR));
+
+
+
+-- Cuadre MTM Fwd RF Cartera
+DROP TABLE IF EXISTS MTM_Fwd_RF_Cartera;
+CREATE OR REPLACE TABLE MTM_Fwd_RF_Cartera AS
+SELECT 
+    SUM(CASE WHEN a.data_date_part = (:FECHA_ACTUAL) THEN COALESCE(a.ajuste_mtm_clp, 0) ELSE 0 END) -
+    SUM(CASE WHEN a.data_date_part = (:FECHA_ANTERIOR) THEN COALESCE(a.ajuste_mtm_clp, 0) ELSE 0 END) AS MTM_Cartera
+FROM prod_business.ooffexp.cartera_fwdrf_cierre_final AS a
+LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_cartera_2 AS b ON b.original = a.prod
+WHERE 
+    a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+GROUP BY b.clasificacion
+ORDER BY b.clasificacion
+UNION ALL
+SELECT
+    d.clasificacion,
+    SUM(c.sdo_mes_peso) AS MTM_Contabilidad     
+FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_syp_2 AS d ON d.codigo = c.codig
+WHERE 
+    c.data_date_part = (:FECHA_DATA) AND 
+    c.sucur = 9999 AND 
+    c.fecha = (:FECHA_SYP) AND 
+    c.moned = 0 AND 
+    c.codig IN (5607256050, 5607256140, 5607256143, 5710257117, 7607276130, 7710277128, 7710277129)
+-- Formato FECHA_SYP AAAAMMDD último día hábil
+GROUP BY d.clasificacion
+ORDER BY d.clasificacion
+UNION ALL
+SELECT 
+    SUM(CASE WHEN a.data_date_part = (:FECHA_ACTUAL) THEN COALESCE(a.ajuste_mtm_clp, 0) ELSE 0 END) -
+    SUM(CASE WHEN a.data_date_part = (:FECHA_ANTERIOR) THEN COALESCE(a.ajuste_mtm_clp, 0) ELSE 0 END) +
+    (SELECT
+        SUM(c.sdo_mes_peso) AS MTM_Contabilidad
+    FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+    LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_syp AS d ON d.codigo = c.codig
+    WHERE 
+        c.data_date_part = (:FECHA_DATA) AND 
+        c.sucur = 9999 AND 
+        c.fecha = (:FECHA_SYP) AND 
+        c.moned = 0 AND 
+        c.codig IN (5607256050, 5607256140, 5607256143, 5710257117, 7607276130, 7710277128, 7710277129)
+    GROUP BY d.clasificacion
+    ORDER BY d.clasificacion) AS Dif_MTM
+FROM prod_business.ooffexp.cartera_fwdrf_cierre_final AS a
+LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_cartera_2 AS b ON b.original = a.prod
+WHERE 
+    a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+GROUP BY b.clasificacion
+ORDER BY b.clasificacion;
+
+--Cuadre MTM Fwd MX/UF Cartera
+DROP TABLE IF EXISTS MTM_Fwd_MX_UF_Cartera;
+CREATE OR REPLACE TABLE MTM_Fwd_MX_UF_Cartera AS
+SELECT 
+    CASE 
+        WHEN a.tipo_estrategia = "TNP" THEN "TRADING" 
+        ELSE "HEDGING" 
+    END AS estrategia,
+    b.clasificacion, 
+    SUM(
+        CASE 
+            WHEN a.data_date_part = (:FECHA_ACTUAL) THEN COALESCE(a.valor_de_mercado_neto_pesos, 0) 
+            ELSE 0 
+        END
+    ) - 
+    SUM(
+        CASE 
+            WHEN a.data_date_part = (:FECHA_ANTERIOR) THEN COALESCE(a.valor_de_mercado_neto_pesos, 0) 
+            ELSE 0 
+        END
+    ) AS MTM_Cartera
+FROM 
+    prod_business.ooffexp.cartera_fwd_cierre_final AS a
+LEFT JOIN 
+    sandbox.ganafinanciero.clasificacion_mtm_cartera_2 AS b 
+ON 
+    b.original = a.tipo_operacion
+WHERE 
+    a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+GROUP BY 
+    a.tipo_estrategia, 
+    b.clasificacion
+ORDER BY 
+    a.tipo_estrategia, 
+    b.clasificacion
+UNION ALL
+SELECT
+    d.clasificacion,
+    SUM(c.sdo_mes_peso) AS MTM_Contabilidad
+FROM 
+    informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+LEFT JOIN 
+    sandbox.ganafinanciero.clasificacion_mtm_syp_2 AS d 
+ON 
+    d.codigo = c.codig
+WHERE 
+    c.data_date_part = (:FECHA_DATA) 
+    AND c.sucur = 9999 
+    AND c.fecha = (:FECHA_SYP) 
+    AND c.moned = 0
+    -- formato FECHA_SYP AAAAMMDD último día hábil
+    AND c.codig IN (
+        5607216005, 5607216006, 5607256001, 5607256002, 5607256003, 5607256004,
+        5607256043, 5607256104, 5607256105, 5607256115, 5607256144, 5607256176,
+        5607256177, 5607256178, 5607256179, 5607256180, 5607256181, 5607256182,
+        5607256183, 5607256184, 5607256185, 5607256186, 5607256187, 5607256188,
+        5607256312, 5607256316, 5607356001, 5607356002, 5607356011, 5607356012,
+        7607276001, 7607276002, 7607276038, 7607276039, 7607276074, 7607276075,
+        7607276131, 7607276152, 7607276155, 7607276158, 7607276161, 7607276164,
+        7607276167, 7607276170, 7607276173, 7607276176, 7607276179, 7607276182,
+        7607276185, 7607276294, 7607276300, 7607276302, 7607276306, 7607321031,
+        7607321032, 7607321041, 5607256318, 5607256314, 5607256005, 5607256006,
+        5607256066, 5607256067, 5607256106, 5607256190, 5607256192, 5607256194,
+        5607256324, 5607256328, 7607276003, 7607276004, 7607276044, 7607276191,
+        7607276193, 7607276195, 7607276318, 7607276322, 5607256338, 5607256344,
+        5607256354, 5607256355, 5607256363, 5607256365, 7607276333, 7607276340,
+        7607276353, 7607276355, 7607276390, 7607276391, 7607276392
+    )
+GROUP BY 
+    d.clasificacion
+ORDER BY 
+    d.clasificacion
+UNION ALL
+SELECT 
+    SUM(
+        CASE 
+            WHEN a.data_date_part = (:FECHA_ACTUAL) THEN COALESCE(a.valor_de_mercado_neto_pesos, 0) 
+            ELSE 0 
+        END
+    ) -
+    SUM(
+        CASE 
+            WHEN a.data_date_part = (:FECHA_ANTERIOR) THEN COALESCE(a.valor_de_mercado_neto_pesos, 0) 
+            ELSE 0 
+        END
+    ) +
+    (   SELECT
+            SUM(c.sdo_mes_peso) AS MTM_Contabilidad
+        FROM 
+            informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+        LEFT JOIN 
+            sandbox.ganafinanciero.clasificacion_mtm_syp_2 AS d 
+        ON 
+            d.codigo = c.codig
+        WHERE 
+            c.data_date_part = (:FECHA_DATA) 
+            AND c.sucur = 9999 
+            AND c.fecha = (:FECHA_SYP) 
+            AND c.moned = 0
+            -- formato FECHA_SYP AAAAMMDD último día hábil
+            AND c.codig IN (
+                5607216005, 5607216006, 5607256001, 5607256002, 5607256003, 5607256004,
+                5607256043, 5607256104, 5607256105, 5607256115, 5607256144, 5607256176,
+                5607256177, 5607256178, 5607256179, 5607256180, 5607256181, 5607256182,
+                5607256183, 5607256184, 5607256185, 5607256186, 5607256187, 5607256188,
+                5607256312, 5607256316, 5607356001, 5607356002, 5607356011, 5607356012,
+                7607276001, 7607276002, 7607276038, 7607276039, 7607276074, 7607276075,
+                7607276131, 7607276152, 7607276155, 7607276158, 7607276161, 7607276164,
+                7607276167, 7607276170, 7607276173, 7607276176, 7607276179, 7607276182,
+                7607276185, 7607276294, 7607276300, 7607276302, 7607276306, 7607321031,
+                7607321032, 7607321041, 5607256318, 5607256314, 5607256005, 5607256006,
+                5607256066, 5607256067, 5607256106, 5607256190, 5607256192, 5607256194,
+                5607256324, 5607256328, 7607276003, 7607276004, 7607276044, 7607276191,
+                7607276193, 7607276195, 7607276318, 7607276322, 5607256338, 5607256344,
+                5607256354, 5607256355, 5607256363, 5607256365, 7607276333, 7607276340,
+                7607276353, 7607276355, 7607276390, 7607276391, 7607276392)
+    ) AS Dif_MTM
+FROM 
+    prod_business.ooffexp.cartera_fwd_cierre_final AS a
+LEFT JOIN 
+    sandbox.ganafinanciero.clasificacion_mtm_cartera_2 AS b 
+ON 
+    b.original = a.tipo_operacion
+WHERE 
+    a.data_date_part IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR));
+
+
+--Cuadre MTM Swaps Cartera
+DROP TABLE IF EXISTS MTM_Swaps_Cartera;
+CREATE OR REPLACE TABLE MTM_Swaps_Cartera AS
+SELECT 
+    a.estrategia,
+    b.clasificacion, 
+    SUM(CASE 
+            WHEN a.fecha = (:FECHA_ACTUAL) THEN (COALESCE(a.mtm_neto_en_clp, 0) + COALESCE(a.mtm_neto, 0)) 
+            ELSE 0 
+        END)
+    - SUM(CASE 
+            WHEN a.fecha = (:FECHA_ANTERIOR) THEN (COALESCE(a.mtm_neto_en_clp, 0) + COALESCE(a.mtm_neto, 0)) 
+            ELSE 0 
+        END) AS MTM_Cartera
+FROM prod_business.ooffexp.cartera_swaps_cierre AS a
+LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_cartera_2 AS b 
+    ON b.original = a.producto
+WHERE 
+    -- a.data_date_part = ${FECHA_DATA} AND 
+    a.fecha IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+    -- Formato fecha 'AAAA-MM-DD'
+GROUP BY 
+    a.estrategia, 
+    b.clasificacion
+ORDER BY 
+    a.estrategia, 
+    b.clasificacion
+UNION ALL
+SELECT
+    -- c.codig,
+    d.clasificacion,
+    SUM(c.sdo_mes_peso) AS MTM_Contabilidad
+FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_syp_2 AS d 
+    ON d.codigo = c.codig
+WHERE 
+    c.data_date_part = (:FECHA_DATA)
+    AND c.sucur = 9999 
+    AND c.fecha = (:FECHA_SYP)
+    AND c.moned = 0
+    -- Formato FECHA_SYP AAAAMMDD último día hábil
+    AND c.codig IN (
+        5607256028, 5607256030, 5607256049, 5607256063, 5607256099, 
+        5607256101, 5607256103, 5607256125, 5607256134, 5607256211, 
+        5607356006, 7607276023, 7607276025, 7607276054, 7607276055, 
+        7607276056, 7607276060, 7607276066, 7607276072, 7607276104, 
+        7607276113, 7607276210, 7607321035, 5607256230, 5607256231, 
+        5710257034, 5710257092, 5710257094, 5710257095, 5710257096, 
+        7607276226, 7607276227, 7710277086, 7710277087, 7710277090, 
+        7710277091, 7710277096, 5607256233, 5607256234, 5607276275, 
+        5710257099, 5710257100, 5710257103, 5710257104, 7607276046, 
+        7607276229, 7607276230, 7607276351, 7710277099, 7710277109, 
+        7710277111, 7710277113, 5607256010, 5607256012, 5607256013, 
+        5607256014, 5607256015, 5607256052, 5607256055, 5607256061, 
+        5607256075, 5607256077, 5607256109, 5607256110, 5607256119, 
+        5607256128, 5607256129, 5607256130, 5607256136, 5607256137, 
+        5607256223, 5607256224, 5607356004, 5710257110, 5710257111, 
+        7607276005, 7607276006, 7607276007, 7607276011, 7607276012, 
+        7607276013, 7607276021, 7607276050, 7607276051, 7607276053, 
+        7607276058, 7607276062, 7607276068, 7607276096, 7607276097, 
+        7607276107, 7607276108, 7607276109, 7607276115, 7607276116, 
+        7607276122, 7607276124, 7607276142, 7607276222, 7607276223, 
+        7607321033, 7710277122, 5607256044, 5607256161, 5607256241, 
+        5710257019, 5710257020, 5710257048, 5710257049, 5710257077, 
+        5710257078, 5710257084, 5710257085, 7607276045, 7607276145, 
+        7607276148, 7607276237, 7710277023, 7710277024, 7710277032, 
+        7710277053, 7710277054, 7710277077, 7710277078, 7710277082, 
+        7710277083, 7710277100, 7710277105, 5607256048, 5607256155, 
+        5607256156, 5607256158, 5607256244, 5710257037, 5710257038, 
+        5710257039, 5710257061, 5710257079, 5710257080, 5710257081, 
+        5710257102, 5710257105, 5710257106, 7607276240, 7710277030, 
+        7710277068, 7710277079, 7710277106, 7710277115, 7710277117, 
+        7607276409, 7607276342, 5607256116, 5607256346
+    )
+GROUP BY 
+    d.clasificacion
+ORDER BY 
+    d.clasificacion
+UNION ALL
+SELECT 
+    SUM(CASE WHEN a.fecha = (:FECHA_ACTUAL) THEN (COALESCE(a.mtm_neto_en_clp, 0) + COALESCE(a.mtm_neto, 0)) ELSE 0 END)
+    - SUM(CASE WHEN a.fecha = (:FECHA_ANTERIOR) THEN (COALESCE(a.mtm_neto_en_clp, 0) + COALESCE(a.mtm_neto, 0)) ELSE 0 END)
+    + (SELECT
+        SUM(c.sdo_mes_peso) AS MTM_Contabilidad
+       FROM informacional_prd.bu_syp_in_hist.sdo_contab_fusion AS c
+       LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_syp_2 AS d 
+           ON d.codigo = c.codig
+       WHERE 
+           c.data_date_part = (:FECHA_DATA)
+           AND c.sucur = 9999 
+           AND c.fecha = (:FECHA_SYP)
+           AND c.moned = 0
+           -- Formato FECHA_SYP AAAAMMDD último día hábil
+           AND c.codig IN (
+               5607256028, 5607256030, 5607256049, 5607256063, 5607256099, 
+               5607256101, 5607256103, 5607256125, 5607256134, 5607256211, 
+               5607356006, 7607276023, 7607276025, 7607276054, 7607276055, 
+               7607276056, 7607276060, 7607276066, 7607276072, 7607276104, 
+               7607276113, 7607276210, 7607321035, 5607256230, 5607256231, 
+               5710257034, 5710257092, 5710257094, 5710257095, 5710257096, 
+               7607276226, 7607276227, 7710277086, 7710277087, 7710277090, 
+               7710277091, 7710277096, 5607256233, 5607256234, 5607276275, 
+               5710257099, 5710257100, 5710257103, 5710257104, 7607276046, 
+               7607276229, 7607276230, 7607276351, 7710277099, 7710277109, 
+               7710277111, 7710277113, 5607256010, 5607256012, 5607256013, 
+               5607256014, 5607256015, 5607256052, 5607256055, 5607256061, 
+               5607256075, 5607256077, 5607256109, 5607256110, 5607256119, 
+               5607256128, 5607256129, 5607256130, 5607256136, 5607256137, 
+               5607256223, 5607256224, 5607356004, 5710257110, 5710257111, 
+               7607276005, 7607276006, 7607276007, 7607276011, 7607276012, 
+               7607276013, 7607276021, 7607276050, 7607276051, 7607276053, 
+               7607276058, 7607276062, 7607276068, 7607276096, 7607276097, 
+               7607276107, 7607276108, 7607276109, 7607276115, 7607276116, 
+               7607276122, 7607276124, 7607276142, 7607276222, 7607276223, 
+               7607321033, 7710277122, 5607256044, 5607256161, 5607256241, 
+               5710257019, 5710257020, 5710257048, 5710257049, 5710257077, 
+               5710257078, 5710257084, 5710257085, 7607276045, 7607276145, 
+               7607276148, 7607276237, 7710277023, 7710277024, 7710277032, 
+               7710277053, 7710277054, 7710277077, 7710277078, 7710277082, 
+               7710277083, 7710277100, 7710277105, 5607256048, 5607256155, 
+               5607256156, 5607256158, 5607256244, 5710257037, 5710257038, 
+               5710257039, 5710257061, 5710257079, 5710257080, 5710257081, 
+               5710257102, 5710257105, 5710257106, 7607276240, 7710277030, 
+               7710277068, 7710277079, 7710277106, 7710277115, 7710277117, 
+               7607276409, 7607276342, 5607256116, 5607256346
+           )
+       ) AS Dif_MTM
+FROM prod_business.ooffexp.cartera_swaps_cierre AS a
+LEFT JOIN sandbox.ganafinanciero.clasificacion_mtm_cartera_2 AS b 
+    ON b.original = a.producto
+WHERE 
+    -- a.data_date_part = ${FECHA_DATA} AND 
+    a.fecha IN ((:FECHA_ACTUAL), (:FECHA_ANTERIOR))
+    -- Formato fecha 'AAAA-MM-DD';

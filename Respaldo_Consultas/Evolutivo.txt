@@ -1,0 +1,157 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import sum as spark_sum, col, expr, format_number, coalesce, max, desc as spark_desc
+from pyspark.sql.window import Window
+
+#Variables a modificar
+fecha_inicio_mes = 20250301
+fecha_termino_mes = 20250331
+
+# Crear sesión de Spark
+spark = SparkSession.builder.appName("SQLtoPySpark").getOrCreate()
+ 
+# Cargar las tablas de datos en DataFrames
+plancta_contab_fusion_df = spark.table("informacional_prd.bu_syp_in.plancta_contab_fusion")
+sdo_contab_fusion_df = spark.table("informacional_prd.bu_syp_in.sdo_contab_fusion")
+sdo_contab_hist_df = spark.table("informacional_prd.bu_syp_in_hist.sdo_contab_fusion")
+ 
+# 001_Crea_Plan_Cuentas_BSC
+plan_cuentas_bsc_df = plancta_contab_fusion_df.select(
+    "empresa",
+    "cuenta",
+    "descripcion",
+    "cod_reaj",
+    "tipo_moneda",
+    "cent_resp",
+    "num_cta_sbif_mdr",
+    "cod_producto"
+)
+
+# Última timestap a la que se actualizó cada fecha de la tabla hist
+# Acá se crea una vista de DF que contiene fecha y data_timestamp_part
+window_spec = Window.partitionBy("fecha").orderBy(spark_desc("data_timestamp_part"))
+
+# Al DF sdo_contab_hist_df se le agrega columna max_data_timestamp_part
+# la cual almacena el data_timestamp de mayor valor para cada fecha
+sdo_contab_hist_df = sdo_contab_hist_df.withColumn("max_data_timestamp_part", max("data_timestamp_part").over(window_spec))
+
+# 002_Crea_Saldos_Contables_BSC_hist, en base al último data_timestamp
+saldos_contables_bsc_hist_df = sdo_contab_hist_df.filter(
+    (col("sucur") == 9999) &
+    (col("fecha").between(fecha_inicio_mes, fecha_termino_mes)) &
+    (col("data_timestamp_part") == col("max_data_timestamp_part"))
+).select(
+    "empresa",
+    "sucur",
+    "moned",
+    "codig",
+    "fecha",
+    "tipo_moneda",
+    "sdo_orig",
+    "sdo_peso",
+    "prom_orig",
+    "prom_peso",
+    "sdo_mes_orig",
+    "sdo_mes_peso",
+    "prom_anual_orig",
+    "prom_anual_peso"
+).orderBy("fecha") 
+ 
+# 003_Crea_Saldos_Contables_BSC_diarios
+saldos_contables_bsc_diarios_df = sdo_contab_fusion_df.filter(
+    (col("sucur") == 9999) &
+    (col("fecha").between(fecha_inicio_mes, fecha_termino_mes))
+).select(
+    "empresa",
+    "sucur",
+    "moned",
+    "codig",
+    "fecha",
+    "tipo_moneda",
+    "sdo_orig",
+    "sdo_peso",
+    "prom_orig",
+    "prom_peso",
+    "sdo_mes_orig",
+    "sdo_mes_peso",
+    "prom_anual_orig",
+    "prom_anual_peso"
+).orderBy("fecha")
+
+
+# 004_Saldos_Contables_BSC diarios tabla
+df_volumen_evolutivo_diario = saldos_contables_bsc_diarios_df.alias("sc").join(
+    plan_cuentas_bsc_df.alias("pc"),
+    col("sc.codig") == col("pc.cuenta")
+).groupBy(
+    "sc.codig",
+    expr("cast(pc.descripcion as string)").alias("descripcion1"),
+    "pc.num_cta_sbif_mdr",
+    "sc.moned",
+    "pc.cent_resp",
+    "pc.cod_producto"
+).pivot(
+    "sc.fecha"
+).agg(
+    spark_sum("sdo_peso").cast("bigint").alias("SumaDesdo_peso")
+).orderBy(
+    "sc.codig",
+    "sc.moned"
+)
+
+# 005_Saldos_Contables_BSC hist tabla
+df_volumen_evolutivo_hist = saldos_contables_bsc_hist_df.alias("sch").join(
+    plan_cuentas_bsc_df.alias("pc"),
+    col("sch.codig") == col("pc.cuenta")
+).groupBy(
+    "sch.codig",
+    expr("cast(pc.descripcion as string)").alias("descripcion1"),
+    "pc.num_cta_sbif_mdr",
+    "sch.moned",
+    "pc.cent_resp",
+    "pc.cod_producto"
+).pivot(
+    "sch.fecha"
+).agg(
+    spark_sum("sdo_peso").cast("bigint").alias("SumaDesdo_peso")
+).orderBy(
+    "sch.codig",
+    "sch.moned"
+)
+
+# Union Saldos_Contables_BSC
+# Obtiene las columnas en común
+common_columns = set(df_volumen_evolutivo_diario.columns) & set(df_volumen_evolutivo_hist.columns)
+
+# Filtra las columnas duplicadas
+filtered_columns = [col for col in df_volumen_evolutivo_hist.columns if col not in common_columns or col in ["codig", "moned"]]
+
+# Une los DataFrames en la columna común 'codig' y 'moned'
+joined_df = df_volumen_evolutivo_diario.join(df_volumen_evolutivo_hist.select("codig", "moned", *filtered_columns), on=["codig", "moned"], how="inner")
+
+# Obtiene todas las columnas del DataFrame resultante y filtra las fechas
+columns = joined_df.columns
+date_columns = [col for col in columns if col not in ["codig", "descripcion1","num_cta_sbif_mdr", "moned", "cent_resp", "cod_producto"] and col.isdigit()]
+
+# Ordena las columnas de fechas
+sorted_date_columns = sorted(date_columns)
+
+# Selecciona las columnas en el orden deseado, manteniendo 'codig' y 'moned' primero
+sorted_columns = ["codig", "descripcion1","num_cta_sbif_mdr", "moned", "cent_resp", "cod_producto"] + sorted_date_columns
+
+# Selecciona las columnas ordenadas
+df_volumen_evolutivo_ordenado = joined_df.select(
+    *sorted_columns
+).orderBy(
+    col("codig"),
+    col("moned")
+)
+
+df_volumen_evolutivo_ordenado_pandas = df_volumen_evolutivo_ordenado.toPandas()
+df_volumen_evolutivo_ordenado_pandas.to_excel("/Workspace/Users/n918175@corp.santander.cl/Evolutivo/Volumen_diario.xlsx")
+
+#df_volumen_evolutivo_ordenado.display()
+df_volumen_evolutivo_ordenado.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable("sandbox.grrf.Evolutivo_Diario") 

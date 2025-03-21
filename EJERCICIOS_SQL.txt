@@ -1,0 +1,113 @@
+-----------------------------------------------------------------------------------------
+SUBCONSULTAS:
+1) A Microsoft Azure Supercloud customer is defined as a customer who has purchased at least one product from every product category listed in the products table.
+
+Write a query that identifies the customer IDs of these Supercloud customers.
+
+WITH supercloud_cust AS(
+SELECT 
+  customers.customer_id,
+  COUNT(DISTINCT products.product_category) AS product_count
+FROM customer_contracts as customers
+  INNER JOIN products
+    ON customers.product_id = products.product_id
+GROUP BY customers.customer_id
+)
+
+SELECT
+customer_id
+FROM supercloud_cust
+WHERE product_count = (
+  SELECT COUNT(DISTINCT product_category) FROM products
+);
+  
+
+2) Zomato is a leading online food delivery service that connects users with various restaurants and cuisines, allowing them to browse menus, place orders, and get meals delivered to their doorsteps.
+
+Recently, Zomato encountered an issue with their delivery system. Due to an error in the delivery driver instructions, each item's order was swapped with the item in the subsequent row. As a data analyst, you're asked to correct this swapping error and return the proper pairing of order ID and item.
+
+If the last item has an odd order ID, it should remain as the last item in the corrected data. For example, if the last item is Order ID 7 Tandoori Chicken, then it should remain as Order ID 7 in the corrected data.
+
+WITH order_counts AS (
+  SELECT COUNT(order_id) AS total_orders 
+  FROM orders
+)
+
+SELECT
+  CASE
+    WHEN order_id % 2 != 0 AND order_id != total_orders THEN order_id + 1
+    WHEN order_id % 2 != 0 AND order_id = total_orders THEN order_id
+    ELSE order_id - 1
+  END AS corrected_order_id,
+  item
+FROM orders
+CROSS JOIN order_counts
+ORDER BY corrected_order_id;
+
+EJ 7: Your team at JPMorgan Chase is soon launching a new credit card. You are asked to estimate how many cards you'll issue in the first month.
+
+Before you can answer this question, you want to first get some perspective on how well new credit card launches typically do in their first month.
+
+Write a query that outputs the name of the credit card, and how many cards were issued in its launch month. The launch month is the earliest record in the monthly_cards_issued table for a given card. Order the results starting from the biggest issued amount.
+
+WITH card_launch AS(
+SELECT 
+  card_name,
+  issued_amount,
+  MAKE_DATE(issue_year, issue_month, 1) AS issue_date,
+  MIN(MAKE_DATE(issue_year, issue_month, 1)) OVER(
+  PARTITION BY card_name) as launch_date
+FROM monthly_cards_issued
+)
+
+SELECT
+ card_name, 
+ issued_amount
+FROM card_launch
+WHERE issue_date = launch_date
+ORDER BY issued_amount DESC;
+
+EJ 8:
+WITH cte_measurement AS(
+SELECT 
+  CAST(measurement_time AS DATE) AS measurement_day,
+  measurement_value,
+  ROW_NUMBER() OVER(
+  PARTITION BY CAST(measurement_time AS DATE)
+  ORDER BY measurement_time) as measurement_num
+FROM measurements
+)
+
+SELECT 
+  measurement_day,
+  SUM(measurement_value) FILTER (WHERE measurement_num % 2 != 0) AS odd_sum,
+  SUM(measurement_value) FILTER (WHERE measurement_num % 2 = 0) AS even_sum
+FROM cte_measurement
+GROUP BY measurement_day;
+* HACE UNA CUBCONSULTA, EN LA QUE TRANSFORMA EL TIEMPO DE MEDIDA A FECHA, TRAE SU VALOR Y ADEMÁS CREA FILAS NUMERADAS, PARTICIONADAS POR EL DÍA DE LA MEDICIÓN, COMO MEASUREMENT_NUM. LUEGO, UNA CONSULTA GENERAL TRAE EL DÍA DE LA MEDICIÓN, Y 2 COLUMNAS, LAS CUALES VAN SUMANDO LOS MEASUREMENT_VALUE
+ACORDE A SI EN LA SUBCONSULTA ESTÁN ASIGNADOS A UN VALOR PAR O IMPAR.
+
+EJ 9: The Bloomberg terminal is the go-to resource for financial professionals, offering convenient access to a wide array of financial datasets. In this SQL interview query for Data Analyst at Bloomberg, you're given the historical data on Google's stock performance.
+
+Your task is to:
+1) Calculate the difference in closing prices between consecutive months.
+2) Calculate the difference between the closing price of the current month and the closing price from 3 months prior.
+
+WITH stock_prices_cte AS(
+SELECT *,
+  LEAD(close) OVER(PARTITION BY ticker ORDER BY date) AS next_month,
+  LAG(close, 3) OVER(PARTITION BY ticker ORDER BY date) AS three_previous_month
+FROM stock_prices
+WHERE ticker = 'GOOG'
+)
+SELECT 
+  date,
+  ticker,
+  open,
+  high,
+  close,
+  (next_month - close) AS consecutive_diff,
+  (close - three_previous_month) AS three_prior
+FROM stock_prices_cte 
+;
+ORDENADAS POR EL DÍA DE LA MEDICIÓN 

@@ -1,0 +1,915 @@
+------------------------------------------------------------------------------------------
+SELECT
+FROM
+WHERE
+GROUP BY
+HAVING
+ORDER BY
+
+------------------------------------------------------------------------------------------
+1) SQL LIMIT and OFFSET
+SELECT * 
+FROM callers
+ORDER BY call_received DESC
+LIMIT 5;
+* 5 most recent phone calls received.
+
+SELECT * 
+FROM callers
+ORDER BY call_received DESC
+OFFSET 10
+LIMIT 5;
+* skip the first 10 phone calls and fetch the subsequent 5 phone calls received
+
+---------------------------------------------------------------------------------------
+AGGREGATE FUNCTIONS
+SUM adds together all the values in a particular column.
+MIN returns the lowest value in a particular column
+MAX returns the highest value in a particular column
+AVG calculates the average of a group of selected values.
+COUNT counts how many rows are in a particular column.
+
+1) COUNT
+SELECT COUNT(*)
+FROM table_name;
+
+2) MIN
+SELECT MIN(COLUMNA)
+FROM TABLA
+WHERE condición;
+
+3) MAX
+SELECT MAX(COLUMNA)
+FROM TABLA
+WHERE condición;
+
+4) AVG
+SELECT AVG(COLUMNA)
+FROM TABLA
+WHERE condición;
+
+--------------------------------------------------------------------------------------------------
+1) GROUP BY:
+SELECT 
+    ticker, 
+    EXTRACT(YEAR FROM date) AS year, 
+    ROUND(AVG(open),2) AS avg_open
+FROM stock_prices 
+GROUP BY ticker, year
+ORDER BY year DESC;
+
+SELECT 
+  ticker,
+  MIN(open)
+FROM stock_prices
+GROUP BY ticker
+ORDER BY MIN(open) DESC;
+
+SELECT
+  COUNT(candidate_id),
+  skill
+FROM candidates
+GROUP BY skill
+ORDER BY COUNT(candidate_id) DESC;
+
+2) HAVING
+* HAVING allows you to filter data based on values from aggregate functions.
+* The difference between WHERE vs. HAVING is a common conceptual SQL interview question, so we figured we'd cover it a bit more explicitly: WHERE filters on values in individual rows, versus HAVING filters values aggregated from groups of rows.
+
+SELECT ticker, AVG(open)
+FROM stock_prices
+GROUP BY ticker
+HAVING AVG(open) > 200;
+
+SELECT ticker, MIN(open) as minimum
+FROM stock_prices
+GROUP BY ticker
+HAVING MIN(open) > 100;
+
+SELECT candidate_id
+FROM candidates
+WHERE skill in ('Python', 'Tableau', 'PostgreSQL')
+GROUP BY candidate_id
+HAVING COUNT(skill) >= 3
+ORDER BY candidate_id;
+
+----------------------------------------------------------------------------------------
+Distinct:  Used in conjunction with the SELECT statement to return only distinct (different) values
+
+SELECT DISTINCT manufacturer
+FROM pharmacy_sales;
+
+*ACEPTA FUNCIONES AGREGADAS
+SELECT COUNT(DISTINCT user_id) 
+FROM trades;
+
+SELECT 
+  category,
+  COUNT(DISTINCT (product))
+FROM product_spend
+GROUP BY category;
+
+-----------------------------------------------------------------------------------------
+SQL Arithmetic Operators
+* Odd and Even with Modulus %
+SELECT * 
+FROM measurements
+WHERE measurement_num % 2 = 1
+
+SELECT 
+  card_name,
+  (MAX(issued_amount) - MIN(issued_amount)) as difference
+FROM monthly_cards_issued
+GROUP BY card_name
+ORDER BY difference DESC;
+
+SELECT 
+  ticker,
+  COUNT(ticker) as big_mover
+FROM stock_prices
+WHERE (close - open)/open*100 > 10 OR (close - open)/open*100 < -10
+GROUP BY ticker
+ORDER BY big_mover DESC;
+
+1) ABS(): Calculating Absolute Differences
+SELECT 
+  date, 
+  ticker,
+  (close-open) AS difference,
+  ABS(close-open) AS abs_difference
+FROM stock_prices
+WHERE EXTRACT(YEAR FROM date) = 2023
+  AND ticker = 'GOOG';
+
+2) ROUND(): Rounding Numbers
+SELECT 
+  ticker,
+  AVG(close) AS avg_close,
+  ROUND(AVG(close), 2) AS rounded_avg_close
+FROM stock_prices
+WHERE EXTRACT(YEAR FROM date) = 2022
+GROUP BY ticker;
+
+* ROUND(AVG(columna), decimales)
+
+3) CEIL() and FLOOR(): Rounding Up and Down
+SELECT 
+  date,
+  ticker,
+  high,
+  CEIL(high) AS resistance_level,
+  low,
+  FLOOR(low) AS support_level
+FROM stock_prices
+WHERE ticker = 'META'
+ORDER BY date;
+
+* By employing FLOOR() on the low column, we highlight potential support levels by rounding down the lowest prices. Conversely, with CEIL() on the high column, we identify potential resistance levels by rounding up the highest prices.
+----------------------------------------------------------------------------------------
+NULLS:
+- IS NULL and IS NOT NULL: Used to identify null and non-null values.
+- COALESCE(): Returns the first non-null value from a list of arguments.
+- IFNULL(): Substitutes null value with a specified value specified.
+* EN SQL, LOS VALORES NULOS SON VALORES QUE ESTÁN VACÍOS O EN BLANCO.
+
+1) COALESCE(column_name1, column_name2, ...., 'expression'):
+*If column_name is NULL, it returns the specified 'expression'. Otherwise, it returns the value of column_name
+
+2) IFNULL(column_name, value_if_null):
+SELECT 
+  book_title, 
+  IFNULL(book_rating, 0) AS rated_books
+FROM goodreads;
+In this instance, the IFNULL() function evaluates each book_rating value, and if a value is present, it remains unchanged. However, if book_rating is NULL, the function substitutes it with 0.
+
+----------------------------------------------------------------------------------------
+CASE: 
+SELECT
+  column_1,
+  column_2, 
+  CASE 
+    WHEN condition_1 THEN result_1
+    WHEN condition_2 THEN result_2
+    WHEN ... THEN ...
+    ELSE result_3 -- If condition_1 and condition_2 are not met, return result_3 in ELSE clause
+  END AS column_3_name -- Give your new column an alias
+FROM table_1;  
+
+*CUANDO HAY UN WHERE:
+SELECT
+  column_1,
+  column_2
+FROM table_1
+WHERE CASE 
+    WHEN condition_1 THEN result_1
+    WHEN condition_2 THEN result_2
+    WHEN ... THEN ...
+    ELSE result_3 -- If condition_1 and condition_2 are not met, return result_3 in ELSE clause
+  END; 
+
+EJ:
+SELECT 
+  actor,
+  character,
+  platform,
+  avg_likes,
+  CASE 
+    WHEN avg_likes >= 15000 THEN 'Super Likes'
+    WHEN avg_likes BETWEEN 5000 and 14999 THEN 'Good Likes'
+    ELSE 'Low Likes'
+  END AS likes_category
+FROM marvel_avengers
+ORDER BY avg_likes DESC;
+
+EJEMPLO 2:
+SELECT 
+  actor, 
+  character, 
+  platform
+FROM marvel_avengers
+WHERE 
+  CASE 
+    WHEN platform = 'Instagram' THEN followers >= 500000
+    WHEN platform = 'Twitter' THEN followers >= 200000
+    ELSE followers >= 100000
+  END;
+* APLICA FILTROS A FILTROS. MUESTRA A LOS ACTORES ACORDE A UN FILTRO DE PLATAFORMA EN LA QUE 
+SE CUENTA CON CIERTA CANTIDAD DE SEGUIDORES
+
+2) Counting Results using SQL COUNT() in CASE Statement
+SELECT
+  platform,
+  COUNT(CASE 
+    WHEN followers >= 500000 THEN 1
+    ELSE NULL
+  END) AS popular_actor_count,
+  COUNT(CASE 
+    WHEN followers < 500000 THEN 1
+    ELSE NULL
+  END) AS less_popular_actor_count
+FROM marvel_avengers
+GROUP BY platform;
+* CLASIFICA EN CONTENIDO POPULAR Y MENOS POPULAR A UNA PLATAFORMA ACORDE A UN NÚMERO
+ESPECIFÍCO DE SEGUIDORES Y MUESTRA LA CANTIDAD, ACORDE  A ESE CRITERIO.
+
+3) Adding Results using SQL SUM() in CASE Statement
+SELECT
+  platform,
+  SUM(CASE 
+    WHEN engagement_rate >= 8.0 THEN followers
+    ELSE 0
+  END) AS high_engagement_followers_sum,
+  SUM(CASE 
+    WHEN engagement_rate < 8.0 THEN followers
+    ELSE 0
+  END) AS low_engagement_followers_sum
+FROM marvel_avengers
+GROUP BY platform;
+* SI engagement_rate, SUMA LA CANTIDAD DE SEGUIDORES A LA COLUMNA high_engagement_followers_sum O
+low_engagement_followers_sum SEGÚN CADA PLATAFORMA.
+
+EJ:
+SELECT 
+  SUM(CASE 
+    WHEN device_type IN('laptop') THEN 1
+    ELSE 0
+  END) AS laptop_views,
+  SUM(CASE 
+    WHEN device_type IN('tablet', 'phone') THEN 1
+    ELSE 0
+  END) AS mobile_views
+FROM viewership;
+* CATEGORIZA EN LAPTOP_VIEWS Y MOBILE_VIEWS Y MUESTRA EL TOTAL DE CADA UNO DE ELLOS SEGÚN USUARIO.
+
+4) Averaging results using SQL AVG() in CASE statement
+SELECT
+  platform,
+  AVG(CASE 
+    WHEN engagement_rate >= 8.0 THEN followers
+    ELSE NULL
+  END) AS avg_high_engagement_followers,
+  AVG(CASE 
+    WHEN engagement_rate < 8.0 THEN followers
+    ELSE NULL
+  END) AS avg_low_engagement_followers
+FROM marvel_avengers
+GROUP BY platform;
+* MUESTRA EL PROMEDIO DE SEGUIDORES ACORDE A UN FILTRO PARA HIGH Y LOW
+
+---------------------------------------------------------------------------------------------------------
+JOIN: 
+I) INNER JOIN	Returns only the rows with matching values from both tables.
+II) LEFT JOIN	Returns all the rows from the left table and the matching rows from the right table.
+III) RIGHT JOIN	Returns all the rows from the right table and the matching rows from the left table.
+IV) FULL OUTER JOIN	Returns all rows when there is a match in either the left or the right table. If there is no match, NULL values are returned for columns from the table without a match.
+SELECT *
+FROM TABLA1
+JOIN TABLA2
+  ON TABLA1.PK = TABLA2.PK;
+
+EJ:
+SELECT
+  city,
+  COUNT(status) as total_orders
+FROM trades
+JOIN users ON trades.user_id = users.user_id
+WHERE status = 'Completed'
+GROUP BY city
+ORDER BY total_orders DESC
+LIMIT 3;
+* MUESTRA, POR CIUDAD, LAS 3 MÁS DEMANDAS SEGÚN ORDEN COMPRA.
+
+1) Conditional SQL JOINS
+EJ1:
+SELECT 
+  g.book_title, 
+  o.quantity
+FROM goodreads AS g
+INNER JOIN orders AS o 
+  ON g.book_id = o.book_id
+    AND o.quantity > 2;
+*This query applies the o.quantity > 2 condition as part of the join condition itself. The join only includes rows where both g.book_id = o.book_id and o.quantity > 2 are true.
+*Since the filter condition is part of the join, no additional filtering is required after the join is performed.
+
+2)
+SELECT 
+  o.order_id, 
+  d.delivery_status
+FROM orders AS o
+INNER JOIN deliveries AS d 
+  ON o.order_id = d.order_id
+    AND d.delivery_status IN ('Delivered', 'Shipped');
+
+3)
+SELECT 
+  g.book_title, 
+  g.author, 
+  o.order_date
+FROM goodreads AS g
+INNER JOIN orders AS o 
+  ON g.book_id = o.book_id
+    AND g.year_released > 2015
+    AND o.quantity > 1;
+
+4)
+SELECT 
+  g.book_title, 
+  g.book_rating, 
+  o.order_date, 
+  d.delivery_status
+FROM goodreads g
+JOIN orders o 
+  ON g.book_id = o.book_id
+    AND g.book_rating > 4.0
+INNER JOIN deliveries d 
+  ON o.order_id = d.order_id
+    AND d.delivery_status = 'Delivered';
+
+-----------------------------------------------------------------------------------------
+SQL Date-Time Functions Tutorial With Practice Exercises
+1) Getting the Current Date and Time in SQL
+- CURRENT_DATE: Returns today's date.
+- CURRENT_TIME: Returns the current time without the date.
+- CURRENT_TIMESTAMP (or NOW()): Returns the current date and time.
+
+2) Extracting Parts from Dates in SQL:
+  * EXTRACT(YEAR FROM sent_date) AS extracted_year,
+  * DATE_PART('year', sent_date) AS part_year,
+
+  * EXTRACT(MONTH FROM sent_date) AS extracted_month,
+  * DATE_PART('month', sent_date) AS part_month,
+
+  * EXTRACT(DAY FROM sent_date) AS extracted_day,
+  * DATE_PART('day', sent_date) AS part_day,
+
+  * EXTRACT(HOUR FROM sent_date) AS extracted_hour,
+  * DATE_PART('hour', sent_date) AS part_hour,
+
+  * EXTRACT(MINUTE FROM sent_date) AS extracted_minute,
+  * DATE_PART('minute', sent_date) AS part_minute
+
+* OBTENER DIFERENCIA DE DÍAS: MAX(COLUMNA1::DATE) - MIN(COLUMNA1::DATE) as days_between 
+EJ: 
+SELECT user_id,
+  MAX(post_date::DATE) - MIN(post_date::DATE) as days_between
+FROM posts
+WHERE EXTRACT(YEAR FROM post_date) = 2021
+GROUP BY user_id
+HAVING COUNT(post_id) > 1;
+
+2) Truncating Date and Time in SQL
+Rounds down a date or timestamp to a specified unit of time. In other words, it trims the finer details and retains the specified unit.
+SELECT 
+  message_id,
+  sent_date,
+  DATE_TRUNC('month', sent_date) AS truncated_to_month,
+  DATE_TRUNC('day', sent_date) AS truncated_to_day,
+  DATE_TRUNC('hour', sent_date) AS truncated_to_hour  
+FROM messages
+LIMIT 3;
+
+3) Adding and Subtracting Intervals in SQL:
+The INTERVAL function is used to handle date and time gaps by adding and subtracting intervals such as "3 days", "5 hours", "45 minutes".
+SELECT 
+  message_id,
+  sent_date,
+  sent_date + INTERVAL '2 days' AS add_2days,
+  sent_date - INTERVAL '3 days' AS minus_3days,
+  sent_date + INTERVAL '2 hours' AS add_2hours,
+  sent_date - INTERVAL '10 minutes' AS minus_10mins
+FROM messages
+LIMIT 3;
+
+EJ: 
+"Assume you're given tables with information about TikTok user sign-ups and confirmations through email and text. New users on TikTok sign up using their email addresses, and upon sign-up, each user receives a text message confirmation to activate their account.
+
+Write a query to display the user IDs of those who did not confirm their sign-up on the first day, but confirmed on the second day."
+SELECT DISTINCT user_id
+FROM emails
+INNER JOIN texts
+  ON emails.email_id = texts.email_id
+WHERE texts.action_date = emails.signup_date + INTERVAL '1 day'
+AND texts.signup_action = 'Confirmed';
+
+4) Formatting Dates in SQL
+
+SELECT 
+  message_id,
+  sent_date,
+  TO_CHAR(sent_date, 'YYYY-MM-DD HH:MI:SS') AS formatted_iso8601,
+  TO_CHAR(sent_date, 'YYYY-MM-DD HH:MI:SS AM') AS formatted_12hr,
+  TO_CHAR(sent_date, 'Month DDth, YYYY') AS formatted_longmonth,
+  TO_CHAR(sent_date, 'Mon DD, YYYY') AS formatted_shortmonth,
+  TO_CHAR(sent_date, 'DD Month YYYY') AS formatted_daymonthyear,
+  TO_CHAR(sent_date, 'Month') AS formatted_dayofmonth,
+  TO_CHAR(sent_date, 'Day') AS formatted_dayofweek
+FROM messages
+LIMIT 3;
+
+6) Casting Strings into Date and Timestamp in SQL
+- ::DATE or TO_DATE(): Convert strings into dates.
+- ::TIMESTAMP or TO_TIMESTAMP(): Convert strings into timestamps.
+
+SELECT 
+  COLUMNA,
+  COLUMNA::DATE AS casted_date,
+  TO_DATE('COLUMNA, 'YYYY-MM-DD') AS converted_to_date,
+  sent_date::TIMESTAMP AS casted_timestamp,
+  TO_TIMESTAMP(COLUMNA, 'YYYY-MM-DD HH:MI:SS') AS converted_to_timestamp
+FROM messages
+LIMIT 3;
+
+-----------------------------------------------------------------------------------------
+CONSULTAS Y SUBCONSULTAS:
+CTE: A CTE, short for Common Table Expression, is like a query within a query. With the WITH statement, you can create temporary tables to store results, making complex queries more readable and maintainable. These temporary tables exist only for the duration of the main query, streamlining your analysis process.
+
+SUBQUERY: Subqueries, also known as inner queries, are powerful tools to embed one query within another. By nesting queries within parentheses, you can generate temporary tables to perform calculations and filter data within the main query. Subqueries enable granular control over your data, enhancing the precision of your analysis
+1) CTE: 
+WITH cte_name AS (
+    -- Subconsulta o lógica compleja
+    SELECT columna1, columna2, ...
+    FROM tabla
+    WHERE condiciones
+)
+-- Consulta principal que utiliza la CTE
+SELECT columna1, columna2, ...
+FROM cte_name
+WHERE condiciones;
+
+* RECURSIVIDAD:
+WITH recursive_cte AS (
+  -- Parte no recursiva: Selecciona el nodo raíz o los nodos iniciales
+  SELECT 
+    item_id, 
+    item_name, 
+    parent_item_id
+  FROM items
+  WHERE parent_item_id IS NULL -- Ajusta esta condición según tu caso específico
+  
+  UNION ALL
+  
+  -- Parte recursiva: Selecciona los nodos que están relacionados con los nodos ya seleccionados
+  SELECT 
+    i.item_id, 
+    i.item_name, 
+    i.parent_item_id
+  FROM items AS i
+  INNER JOIN recursive_cte AS r -- La CTE RECURSIVA se utiliza aquí dentro de la CTE principal.
+    ON i.parent_item_id = r.item_id
+)
+
+SELECT * 
+FROM recursive_cte;
+
+EJ:
+WITH recursive_cte AS (
+  SELECT 
+    employee_id, 
+    name, 
+    manager_id
+  FROM employees
+  WHERE manager_id = @manager_id
+  
+  UNION ALL
+  
+  SELECT 
+    e.employee_id, 
+    e.name, 
+    e.manager_id
+  FROM employees AS e
+  INNER JOIN recursive_cte AS r -- The RECURSIVE CTE is utilized here within the main CTE.
+    ON e.ManagerID = r.employee_id
+)
+
+SELECT * 
+FROM recursive_cte;
+
+2) SUBQUERY: 
+I) Single-Value Comparison in WHERE Clauses: When you need to compare a single value to a result from another query, utilize the subquery in the WHERE clause to enable dynamic data filtering. This enhances query flexibility and precision by allowing on-the-fly condition adjustments based on subquery results.
+SELECT artist_name
+FROM concerts
+WHERE concert_revenue > (
+  SELECT AVG(concert_revenue) FROM concerts);
+
+II) Column Creation and Aggregation: Utilize subqueries to create new columns for real-time computations and to calculate intermediate values for aggregation functions within larger queries. This enhances your analysis by enriching data on the go and enabling more sophisticated aggregation.
+SELECT 
+  artist_name, 
+  genre, 
+  concert_revenue,
+  (SELECT AVG(concert_revenue) FROM concerts) AS avg_concert_revenue,
+  (SELECT MAX(concert_revenue) FROM concerts) AS max_concert_revenue
+FROM concerts;
+
+III) IN, NOT IN, and EXISTS:
+SELECT artist_name
+FROM concerts
+WHERE artist_id IN (
+  SELECT artist_id FROM concert_revenue WHERE concert_revenue > 500000);
+
+* Correlated Subqueries: Utilize correlated subqueries to retrieve values from the outer query.
+SELECT 
+  artist_name, 
+  genre, 
+  concert_revenue
+FROM concerts AS c1
+WHERE concert_revenue = (
+  SELECT MAX(concert_revenue)
+  FROM concerts AS c2
+  WHERE c1.genre = c2.genre
+);
+
+EJ: Write a query to rank the artists within each genre based on their revenue per member and extract the top revenue-generating artist from each genre. Display the output of the artist name, genre, concert revenue, number of members, and revenue per band member, sorted by the highest revenue per member within each genre.
+* SOLUCIÓN SUBQUERY:
+SELECT
+  artist_name,
+  concert_revenue,
+  genre,
+  number_of_members,
+  revenue_per_member
+FROM (
+  -- Subquery Result
+  SELECT
+    artist_name,
+    concert_revenue,
+    genre,
+    number_of_members,
+    concert_revenue / number_of_members AS revenue_per_member,
+    RANK() OVER (
+      PARTITION BY genre
+      ORDER BY concert_revenue / number_of_members DESC) AS ranked_concerts
+  FROM concerts) AS subquery
+WHERE ranked_concerts = 1
+ORDER BY revenue_per_member DESC;
+
+
+*SOLUCION CTE:
+WITH ranked_concerts_cte AS (
+  SELECT
+    artist_name,
+    concert_revenue,
+    genre,
+    number_of_members,
+    concert_revenue / number_of_members AS revenue_per_member,
+    RANK() OVER (
+      PARTITION BY genre
+      ORDER BY concert_revenue / number_of_members DESC) AS ranked_concerts
+  FROM concerts
+)
+
+SELECT
+  artist_name,
+  concert_revenue,
+  genre,
+  number_of_members,
+  revenue_per_member
+FROM ranked_concerts_cte
+WHERE ranked_concerts = 1
+ORDER BY revenue_per_member DESC;
+
+-----------------------------------------------------------------------------------------
+SQL Aggregate Window Functions With Examples & Practice Exercises:
+In simple terms, they are functions that operate by creating virtual "windows" 🪟 within the dataset.
+
+SELECT
+  spend,
+   SUM(spend) OVER (
+     PARTITION BY product
+     ORDER BY transaction_date) AS running_total
+  FROM product_spend;
+
+-------------
+SUM(spend) OVER (
+     PARTITION BY product
+     ORDER BY transaction_date) AS running_total
+-------------
+* SE CREARON VENTAS DE PRODUCTOS, EN LAS CUAL SE MUESTRA LO GASTADO POR PRODUCTO.
+SUM(): SUM(spend) is a typical aggregate function
+OVER: OVER required for window functions
+PARTITION BY: makes each product it's own section / window,
+ORDER BY: the data is ordered by transaction_date, and the running_total accumulates the sum across the current row and all subsequent rows of spend
+ORDER BY: ORDER BY essentially sorts the data by the specified column, similar to an ORDER BY clause.
+Without ORDER BY, each value would be a sum of all the spend values without its respective product.
+
+EJ 1:
+SELECT 
+  user_id,
+  category, 
+  product,
+  spend,
+  SUM(spend) OVER (
+    PARTITION BY user_id ORDER BY transaction_date) AS cumulative_spend
+FROM product_spend;
+* SEPARA EN VENTANAS DE USER_ID Y CALCULA EL ACUMULADO GASTADO POR USUARIO.
+
+EJ 2:
+SELECT 
+  user_id,
+  category, 
+  product,
+  transaction_date,
+  spend,
+  ROUND(AVG(spend) OVER (
+    PARTITION BY user_id ORDER BY transaction_date),2) AS rolling_avg_spend
+FROM product_spend;
+* SEPARA EN VENTANAS DE USER_ID Y CALCULA EL PROMEDIO GASTADO POR USUARIO.
+
+EJ 3:
+SELECT 
+  category, 
+  product, 
+  spend,
+  MIN(spend) OVER (
+    PARTITION BY product) AS min_product_spend
+FROM product_spend;
+* SEPARA EN VENTANAS DE ACUERDO A PRODUCT Y MUESTRA EL MÍNIMO GASTADO POR UN PRODUCTO
+
+EJ 4:
+SELECT 
+  category, 
+  product, 
+  spend,
+  MAX(spend) OVER (
+    PARTITION BY product) AS max_product_spend
+FROM product_spend;
+* SEPARA EN VENTANAS DE ACUERDO A PRODUCT Y MUESTRA EL MÁXIMO GASTADO POR UN PRODUCTO
+
+EJ 5:
+SELECT 
+  category, 
+  product, 
+  user_id, 
+  spend, 
+  transaction_date,
+  FIRST_VALUE(product) OVER (
+    ORDER BY transaction_date) AS first_purchase,
+  LAST_VALUE(product) OVER (
+    ORDER BY transaction_date) AS last_purchase
+FROM product_spend;
+* MUESTRA EL PRIMER Y ÚLTIMO PRODUCTO ADQUIRIDO, ORDENADO POR FECHA DE TRANSACCIÓN.
+
+EJ 6:
+SELECT 
+  category, 
+  product, 
+  user_id, 
+  spend, 
+  transaction_date,
+  FIRST_VALUE(product) OVER (
+    PARTITION BY user_id ORDER BY transaction_date) AS first_user_purchase,
+  LAST_VALUE(product) OVER (
+    PARTITION BY user_id ORDER BY transaction_date) AS last_user_purchase
+FROM product_spend;
+* MUESTRA EL PRIMER Y ÚLTIMO PRODUCTO ADQUIRIDO, SEPARADO EN VENTANA SEGÚN USER_ID.
+
+
+* MUESTRA EL PRIMER Y ÚLTIMO PRODUCTO ADQUIRIDO, ORDENADOS POR FECHA DE TRANSACCIÓN.
+
+EJ 7:
+WITH card_launch AS(
+SELECT 
+  card_name,
+  issued_amount,
+  MAKE_DATE(issue_year, issue_month, 1) AS issue_date,
+  MIN(MAKE_DATE(issue_year, issue_month, 1)) OVER(
+  PARTITION BY card_name) as launch_date
+FROM monthly_cards_issued
+)
+
+SELECT
+ card_name, 
+ issued_amount
+FROM card_launch
+WHERE issue_date = launch_date
+ORDER BY issued_amount DESC;
+
+-----------------------------------------------------------------------------------------
+SQL Ranking Window Functions With Examples: 
+
+SELECT 
+  RANK() / DENSE_RANK() / ROW_NUMBER() OVER ( -- Compulsory expression
+    PARTITION BY partitioning_expression -- Optional expression
+    ORDER BY order_expression) -- Compulsory expression
+FROM table_name;
+ROW_NUMBER(): This function assigns a unique sequential number to each row within a window. It's like numbering the rows in order.
+
+RANK(): The RANK() function handles tied values by assigning the same rank to them. However, it may skip subsequent ranks, leaving gaps in the sequence.
+
+DENSE_RANK(): Similar to RANK(), DENSE_RANK() also handles tied values by assigning the same rank. However, it does not skip ranks, resulting in no gaps in the sequence.
+
+EJ 1:
+SELECT 
+ artist_name, 
+ concert_revenue, 
+ ROW_NUMBER() OVER (ORDER BY concert_revenue) AS row_num,
+ RANK() OVER (ORDER BY concert_revenue) AS rank_num,
+ DENSE_RANK() OVER (ORDER BY concert_revenue) AS dense_rank_num
+FROM concerts;
+
+artist_name	concert_revenue	row_num	rank_num	dense_rank_num
+BTS			800000	1	1		1
+Beyonce			750000	2	2		2
+Ariana Grande		720000	3	3		3
+Bruno Mars		700000	4	4		4
+Taylor Swift		700000	5	4		4
+Justin Bieber		680000	6	6		5
+Pink Floyd		670000	7	7		6
+Red Hot Chili Peppers	660000	8	8		7
+U2			650000	9	9		8
+Ed Sheeran		650000	10	9		8
+
+EJ 2:
+SELECT 
+  artist_name, 
+  country,
+  year_of_formation,
+  ROW_NUMBER() OVER (PARTITION BY country ORDER BY year_of_formation) AS row_num,
+ RANK() OVER (PARTITION BY country ORDER BY year_of_formation) AS rank_num,
+ DENSE_RANK() OVER (PARTITION BY country ORDER BY year_of_formation) AS dense_rank_num
+FROM concerts;
+* CADA ARTISTA ESTA RANKEADO SEGÚN SU PAÍS. CABE DESTACAR QUE CADA FUNCIÓN RESETEA SU CONTADOR AL CAMBIAR DE PAÍS,
+POR LO QUE MUESTRAN LO MISMO.
+
+EJ 3:
+WITH cte_artist as(
+SELECT 
+  artist_name,
+  DENSE_RANK() OVER(
+  ORDER BY COUNT(songs.song_id) DESC) as artist_rank
+FROM artists
+  INNER JOIN songs
+    ON artists.artist_id = songs.artist_id
+  INNER JOIN global_song_rank as ranking
+    ON songs.song_id = ranking.song_id
+WHERE ranking.rank <= 10
+GROUP BY artists.artist_name
+)
+
+SELECT artist_name, artist_rank
+FROM cte_artist
+WHERE artist_rank <= 5;
+* UNA SUBCONSULTA CUENTA LAS CANCIONES QUE HAN SIDO RANKEADAS POR ATISTAS, Y LUEGO UNA CONSULTA GENERAL
+TRAE A LOS ARTISTAS Y SU RANKING.
+
+EJ 4:
+WITH cte_transaction AS(
+SELECT 
+  transaction_date,
+  user_id,
+  product_id,
+  RANK() OVER(
+  PARTITION BY user_id
+  ORDER BY transaction_date DESC) as transaction_rank
+FROM user_transactions
+)
+
+SELECT 
+  transaction_date,
+  user_id,
+  COUNT(product_id) AS purchase_count
+FROM cte_transaction
+WHERE transaction_rank = 1
+GROUP BY transaction_date, user_id
+ORDER BY transaction_date;
+* HACE UNA SUBCONSULTA, EN LA CUAL LAS TRANSACCIONES SON RANKEADAS ACORDE A EL USUARIO, ORDENADO DE MANERA DESCENTE (DE TAL FORMA QUE EN ESA COLUMNA
+LA PRIMERA FECHA CORRESPONDE A LA ÚLTIMA FECHA). LUEGO, EN LA CONSULTA PRINCIPAL, SE CUENTA LA CANTIDAD DE PRODUCTOS ADQUIRIDOS SEGÚN USER_ID
+Y SE FILTRA ACORDE A LA FECHA DE TRANSACCIÓN.
+
+
+-----------------------------------------------------------------------------------------
+SQL Time-Series Window Functions: LEAD & LAG
+LEAD() and LAG() are time-series window functions used to access data from rows that come after, or before the current row within a result set based on a specific column order.
+
+Think of LEAD() as a function that lets you peek into the future 🔮, and LAG() as a way to glance into the past ⏪. They're like time-travel functions for your data! We frequently use this to create a 7-day moving average metric, or a 28-day rolling count metric.
+* LEAD ---> FUTURO
+* LAG ----> PASADO
+
+LEAD(column_name, offset) OVER (  -- Compulsory expression
+  PARTITION BY partition_column -- Optional expression
+  ORDER BY order_column) -- Compulsory expression
+  
+LAG(column_name, offset) OVER ( -- Compulsory expression
+  PARTITION BY partition_column -- Optional expression
+  ORDER BY order_column) -- Compulsory expression
+
+
+EJ:
+* The Bloomberg terminal is the go-to resource for financial professionals, offering convenient access to a wide array of financial datasets. In this SQL interview query for Data Analyst at Bloomberg, you're given the historical data on Google's stock performance. 
+
+Your task is to:
+
+Calculate the difference in closing prices between consecutive months.
+Calculate the difference between the closing price of the current month and the closing price from 3 months prior. *
+
+
+WITH stock_prices_cte AS(
+SELECT *,
+  LEAD(close) OVER(PARTITION BY ticker ORDER BY date) AS next_month,
+  LAG(close, 3) OVER(PARTITION BY ticker ORDER BY date) AS three_previous_month
+FROM stock_prices
+WHERE ticker = 'GOOG'
+)
+SELECT 
+  date,
+  ticker,
+  open,
+  high,
+  close,
+  (next_month - close) AS consecutive_diff,
+  (close - three_previous_month) AS three_prior
+FROM stock_prices_cte 
+;
+
+
+EJ 2:
+*Suppose you want to calculate the difference in closing prices between consecutive months of the year 2023 for the stock with ticker 'GOOG'. Here's the query to achieve that: *
+SELECT
+  date,
+  close,
+  LEAD(close) OVER (ORDER BY date) AS next_month_close,
+  LAG(close) OVER (ORDER BY date) AS prev_month_close
+FROM stock_prices
+WHERE EXTRACT(YEAR FROM date) = 2023
+  AND ticker = 'GOOG';
+
+
+EJ 3:
+* Let's say we want to calculate the difference between the current month's closing price and the closing price from 3 months ago.*
+SELECT
+  date,
+  close,
+  LAG(close, 3) OVER (ORDER BY date) AS three_months_ago_close,
+  close - LAG(close, 3) OVER (ORDER BY date) AS difference
+FROM stock_prices
+WHERE EXTRACT(YEAR FROM date) = 2023
+  AND ticker = 'GOOG';
+
+EJ 4:
+* Assume you're given a table containing information about Wayfair user transactions for different products. Write a query to calculate the year-on-year growth rate for the total spend of each product, grouping the results by product ID.
+
+The output should include the year in ascending order, product ID, current year's spend, previous year's spend and year-on-year growth percentage, rounded to 2 decimal places. *
+WITH yearly_spend_cte AS(
+SELECT 
+  EXTRACT(YEAR FROM transaction_date) as year,
+  product_id,
+  spend as curr_year_spend ,
+  LAG(spend) OVER(
+  PARTITION BY product_id
+  ORDER BY
+    product_id,
+    EXTRACT(YEAR FROM transaction_date)) AS prev_year_spend
+FROM user_transactions
+)
+
+SELECT
+  year,
+  product_id,
+  curr_year_spend,
+  prev_year_spend,
+  ROUND(100*(curr_year_spend - prev_year_spend)/prev_year_spend, 2) AS yoy_rate
+FROM yearly_spend_cte;
+
+
+
+
+
+
